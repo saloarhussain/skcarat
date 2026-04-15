@@ -9,15 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { auth } from "@/firebase";
 import { 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber, 
-  ConfirmationResult,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, MessageCircle, X } from "lucide-react";
+import { ArrowRight, MessageCircle, X, Mail, Lock, UserPlus, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoginModalProps {
@@ -26,19 +27,16 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
-  const [timer, setTimer] = useState(0);
   const [settings, setSettings] = useState({
-    phoneEnabled: true,
+    emailEnabled: true,
     googleEnabled: true,
     whatsappEnabled: false,
     privacyPolicyUrl: '/privacy-policy',
     termsUrl: '/terms',
-    otpTimer: 30,
     supportEmail: 'support@aurajewelry.com',
     whatsappNumber: '+919876543210'
   });
@@ -51,7 +49,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         const docRef = doc(db, 'settings', 'auth_config');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as any);
+          const data = docSnap.data();
+          setSettings({
+            ...settings,
+            ...data,
+            emailEnabled: data.emailEnabled ?? true // Fallback to true if not set
+          } as any);
         }
       } catch (error) {
         console.error('Error fetching auth settings:', error);
@@ -60,102 +63,58 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (isOpen) fetchSettings();
   }, [isOpen]);
 
-  useEffect(() => {
-    let interval: any;
-    if (timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timer]);
-
-  const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          // reCAPTCHA solved, allow signInWithPhoneNumber.
-        }
-      });
-    }
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber || phoneNumber.length < 10) {
-      toast.error("Please enter a valid phone number");
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
       return;
     }
 
     setLoading(true);
     try {
-      setupRecaptcha();
-      const appVerifier = (window as any).recaptchaVerifier;
-      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
-      
-      try {
-        const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-        setConfirmationResult(result);
-        setStep('otp');
-        setTimer(settings.otpTimer);
-        toast.success("OTP sent successfully");
-      } catch (firebaseError: any) {
-        console.error("Firebase Phone Auth Error:", firebaseError);
-        
-        // Fallback to Demo Mode if Phone Auth is not enabled or domain not allowlisted
-        if (
-          firebaseError.code === 'auth/operation-not-allowed' || 
-          firebaseError.code === 'auth/unauthorized-domain' ||
-          firebaseError.message?.includes('not-allowed')
-        ) {
-          toast.info("Demo Mode: Phone Auth is not enabled in Firebase. Using simulated OTP for testing.");
-          setStep('otp');
-          setTimer(settings.otpTimer);
-          // We'll use a dummy confirmation result for demo mode
-          setConfirmationResult({
-            confirm: async (code: string) => {
-              if (code === '123456') {
-                return { user: { uid: 'demo-user', phoneNumber: formattedPhone } } as any;
-              }
-              throw new Error('Invalid OTP');
-            }
-          } as any);
+      if (mode === 'signup') {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        toast.success("Account created! Please check your email for verification.");
+        setMode('login');
+      } else {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCredential.user.emailVerified) {
+          toast.warning("Please verify your email address. A verification link was sent to your inbox.");
+          // Optionally resend verification
+          // await sendEmailVerification(userCredential.user);
         } else {
-          throw firebaseError;
+          toast.success("Logged in successfully");
+          onClose();
         }
       }
     } catch (error: any) {
-      console.error("Error sending OTP:", error);
-      toast.error(error.message || "Failed to send OTP");
-      if ((window as any).recaptchaVerifier) {
-        (window as any).recaptchaVerifier.clear();
-        (window as any).recaptchaVerifier = null;
+      console.error("Auth Error:", error);
+      let message = "Authentication failed";
+      if (error.code === 'auth/user-not-found') message = "No account found with this email";
+      if (error.code === 'auth/wrong-password') message = "Incorrect password";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already registered. Please login instead.";
+        setMode('login');
       }
+      if (error.code === 'auth/weak-password') message = "Password should be at least 6 characters";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp || otp.length < 6) {
-      toast.error("Please enter a valid 6-digit OTP");
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email address first");
       return;
     }
-
-    setLoading(true);
     try {
-      if (confirmationResult) {
-        await confirmationResult.confirm(otp);
-        toast.success("Logged in successfully");
-        onClose();
-      }
+      await sendPasswordResetEmail(auth, email);
+      toast.success("Password reset link sent to your email");
     } catch (error: any) {
-      console.error("Error verifying OTP:", error);
-      toast.error("Invalid OTP. Please try again.");
-    } finally {
-      setLoading(false);
+      console.error("Reset Error:", error);
+      toast.error("Failed to send reset link. Please check the email address.");
     }
   };
 
@@ -195,167 +154,141 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <div id="recaptcha-container"></div>
 
           <AnimatePresence mode="wait">
-            {step === 'phone' ? (
-              <motion.div
-                key="phone-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-6"
-              >
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold text-gray-900">Enter Mobile Number</h2>
-                  <p className="text-sm text-gray-500">
-                    We will send you an OTP to verify your number
-                  </p>
-                </div>
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {mode === 'login' 
+                    ? 'Login to access your account' 
+                    : 'Sign up to start shopping with Aura'}
+                </p>
+              </div>
 
-                <form onSubmit={handleSendOtp} className="space-y-4">
-                  <div className="flex items-center gap-2 rounded-xl border border-gray-200 p-1 focus-within:border-pink-400 transition-colors">
-                    <div className="flex items-center gap-1 px-3 border-r border-gray-100">
-                      <img 
-                        src="https://flagcdn.com/w20/in.png" 
-                        alt="India" 
-                        className="w-5 h-auto rounded-sm"
-                      />
-                      <span className="text-sm font-medium text-gray-600">+91</span>
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-1 focus-within:border-pink-400 transition-colors bg-gray-50/50">
+                    <div className="pl-3">
+                      <Mail className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      type="tel"
-                      placeholder="Phone number"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="flex-1 bg-transparent py-3 px-2 outline-none text-gray-900 placeholder:text-gray-400"
+                      type="email"
+                      placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="flex-1 bg-transparent py-3 px-2 outline-none text-gray-900 placeholder:text-gray-400 text-sm"
                       required
                     />
                   </div>
 
-                  <Button 
-                    type="submit"
-                    disabled={loading || phoneNumber.length < 10}
-                    className="w-full h-14 bg-[#EC7B8F] hover:bg-[#E56A80] text-white rounded-xl text-lg font-medium transition-all group"
-                  >
-                    {loading ? "Sending..." : "Request OTP"}
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </form>
-
-                {(settings.googleEnabled || settings.whatsappEnabled) && (
-                  <>
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-100" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-white px-4 text-gray-400 font-medium">Or Login Using</span>
-                      </div>
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-1 focus-within:border-pink-400 transition-colors bg-gray-50/50">
+                    <div className="pl-3">
+                      <Lock className="h-5 w-5 text-gray-400" />
                     </div>
-
-                    <div className={cn(
-                      "grid gap-3",
-                      settings.googleEnabled && settings.whatsappEnabled ? "grid-cols-2" : "grid-cols-1"
-                    )}>
-                      {settings.whatsappEnabled && (
-                        <Button
-                          variant="outline"
-                          onClick={handleWhatsAppLogin}
-                          className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
-                        >
-                          <MessageCircle className="h-5 w-5 text-[#25D366]" />
-                          WhatsApp
-                        </Button>
-                      )}
-                      {settings.googleEnabled && (
-                        <Button
-                          variant="outline"
-                          onClick={handleGoogleLogin}
-                          className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
-                        >
-                          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                          Google
-                        </Button>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                <div className="text-center space-y-4">
-                  <button className="text-sm font-semibold text-gray-900 underline underline-offset-4">
-                    Having trouble logging in?
-                  </button>
-                  <p className="text-[10px] text-gray-400 leading-relaxed">
-                    I accept that I have read & understood <br />
-                    <a href={settings.privacyPolicyUrl} className="underline">Privacy Policy</a> and <a href={settings.termsUrl} className="underline">T&Cs</a>.
-                  </p>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="otp-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="space-y-6"
-              >
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold text-gray-900">Verify OTP</h2>
-                  <p className="text-sm text-gray-500">
-                    Sent to +91 {phoneNumber}
-                  </p>
-                  {confirmationResult && (confirmationResult as any).confirm.toString().includes('demo-user') && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
-                      <p className="text-xs text-blue-600 font-medium">
-                        Demo Mode Active: Use OTP <span className="font-bold">123456</span> to log in.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="flex justify-center gap-2">
-                    <Input
-                      type="text"
-                      maxLength={6}
-                      placeholder="Enter 6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                      className="h-14 text-center text-2xl tracking-[0.5em] font-bold rounded-xl border-gray-200 focus:border-pink-400"
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="flex-1 bg-transparent py-3 px-2 outline-none text-gray-900 placeholder:text-gray-400 text-sm"
                       required
                     />
                   </div>
-
-                  <Button 
-                    type="submit"
-                    disabled={loading || otp.length < 6}
-                    className="w-full h-14 bg-[#EC7B8F] hover:bg-[#E56A80] text-white rounded-xl text-lg font-medium transition-all"
-                  >
-                    {loading ? "Verifying..." : "Verify & Login"}
-                  </Button>
-                </form>
-
-                <div className="text-center">
-                  {timer > 0 ? (
-                    <p className="text-sm text-gray-500">
-                      Resend OTP in <span className="font-bold text-pink-500">{timer}s</span>
-                    </p>
-                  ) : (
-                    <button 
-                      onClick={handleSendOtp}
-                      className="text-sm font-bold text-pink-500 hover:underline"
-                    >
-                      Resend OTP
-                    </button>
+                  {mode === 'login' && (
+                    <div className="flex justify-end px-1">
+                      <button 
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-xs font-medium text-pink-500 hover:underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <button 
-                  onClick={() => setStep('phone')}
-                  className="w-full text-sm font-medium text-gray-500 hover:text-gray-900"
+                <Button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-14 bg-[#EC7B8F] hover:bg-[#E56A80] text-white rounded-xl text-lg font-medium transition-all group"
                 >
-                  Change Phone Number
+                  {loading ? "Processing..." : (mode === 'login' ? "Login" : "Create Account")}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </form>
+
+              <div className="text-center">
+                <button 
+                  onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                  className="text-sm font-medium text-pink-500 hover:text-pink-600 flex items-center justify-center gap-2 mx-auto"
+                >
+                  {mode === 'login' ? (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      Don't have an account? Sign Up
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4" />
+                      Already have an account? Login
+                    </>
+                  )}
                 </button>
-              </motion.div>
-            )}
+              </div>
+
+              {(settings.googleEnabled || settings.whatsappEnabled) && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-100" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-4 text-gray-400 font-medium">Or Continue With</span>
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "grid gap-3",
+                    settings.googleEnabled && settings.whatsappEnabled ? "grid-cols-2" : "grid-cols-1"
+                  )}>
+                    {settings.whatsappEnabled && (
+                      <Button
+                        variant="outline"
+                        onClick={handleWhatsAppLogin}
+                        className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
+                      >
+                        <MessageCircle className="h-5 w-5 text-[#25D366]" />
+                        WhatsApp
+                      </Button>
+                    )}
+                    {settings.googleEnabled && (
+                      <Button
+                        variant="outline"
+                        onClick={handleGoogleLogin}
+                        className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
+                      >
+                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+                        Google
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className="text-center space-y-4">
+                <p className="text-[10px] text-gray-400 leading-relaxed">
+                  By continuing, you accept our <br />
+                  <a href={settings.privacyPolicyUrl} className="underline">Privacy Policy</a> and <a href={settings.termsUrl} className="underline">T&Cs</a>.
+                </p>
+              </div>
+            </motion.div>
           </AnimatePresence>
         </div>
       </DialogContent>

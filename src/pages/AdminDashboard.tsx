@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Plus, Edit, Trash2, Save, X, Image as ImageIcon, Package, Tag, Info, Truck, Gift, MessageCircle, Phone, Upload, Trash } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Image as ImageIcon, Package, Tag, Info, Truck, Gift, MessageCircle, Mail, Upload, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -75,12 +75,11 @@ export default function AdminDashboard() {
   };
 
   const [authSettings, setAuthSettings] = useState({
-    phoneEnabled: true,
+    emailEnabled: true,
     googleEnabled: true,
     whatsappEnabled: false,
     privacyPolicyUrl: '/privacy-policy',
     termsUrl: '/terms',
-    otpTimer: 30,
     supportEmail: 'support@aurajewelry.com',
     whatsappNumber: '+919876543210'
   });
@@ -691,48 +690,51 @@ export default function AdminDashboard() {
               <CardDescription>Configure how your customers log in to Aura Jewelry.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-8">
-              {/* Phone Auth Section */}
+              {/* Email Auth Section */}
               <div className="flex flex-col md:flex-row items-start justify-between gap-6 p-6 rounded-2xl bg-brand-paper border border-brand-dark/5">
                 <div className="space-y-4 flex-1">
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 bg-[#EC7B8F] rounded flex items-center justify-center text-white">
-                      <Phone className="h-5 w-5" />
+                      <Mail className="h-5 w-5" />
                     </div>
-                    <h3 className="text-xl font-medium">Phone OTP Login</h3>
+                    <h3 className="text-xl font-medium">Email & Password Login</h3>
                     <span className={cn(
                       "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
-                      authSettings.phoneEnabled ? "bg-green-100 text-green-700" : "bg-brand-dark/10 text-brand-dark/40"
+                      authSettings.emailEnabled ? "bg-green-100 text-green-700" : "bg-brand-dark/10 text-brand-dark/40"
                     )}>
-                      {authSettings.phoneEnabled ? "Active" : "Disabled"}
+                      {authSettings.emailEnabled ? "Active" : "Disabled"}
                     </span>
                   </div>
                   <p className="text-sm text-brand-dark/60 max-w-xl">
-                    Allow users to log in using their mobile number and a 6-digit OTP. This uses Firebase Phone Authentication.
+                    Allow users to log in using their email address and password. This includes mandatory email verification for new accounts.
                   </p>
+                  <div className="rounded-lg bg-blue-50 p-3 border border-blue-100">
+                    <p className="text-[10px] text-blue-800 leading-relaxed">
+                      <strong>Note:</strong> To use Email Auth, you must enable "Email/Password" as a sign-in provider in your <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Console</a>.
+                    </p>
+                  </div>
                   <div className="space-y-2">
                     <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Current Status</p>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2 text-xs">
-                        <div className={cn("h-2 w-2 rounded-full", authSettings.phoneEnabled ? "bg-green-500" : "bg-brand-dark/20")} />
-                        <span>Firebase Auth: {authSettings.phoneEnabled ? "Connected" : "Disconnected"}</span>
+                        <div className={cn("h-2 w-2 rounded-full", authSettings.emailEnabled ? "bg-green-500" : "bg-brand-dark/20")} />
+                        <span>Firebase Auth: {authSettings.emailEnabled ? "Connected" : "Disconnected"}</span>
                       </div>
-                      {authSettings.phoneEnabled && (
-                        <div className="flex items-center gap-2 text-xs">
-                          <div className="h-2 w-2 rounded-full bg-blue-500" />
-                          <span>Demo Mode: Auto-fallback enabled (Test OTP: 123456)</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span>Email Verification: Mandatory for Sign Up</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <Button 
-                  onClick={() => {
-                    const el = document.getElementById('login-customization');
-                    el?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="bg-brand-dark text-white hover:bg-brand-dark/90 w-full md:w-auto"
+                  onClick={() => saveAuthSettings({...authSettings, emailEnabled: !authSettings.emailEnabled})}
+                  className={cn(
+                    "w-full md:w-auto",
+                    authSettings.emailEnabled ? "bg-red-500 hover:bg-red-600 text-white" : "bg-brand-dark text-white hover:bg-brand-dark/90"
+                  )}
                 >
-                  Edit Settings
+                  {authSettings.emailEnabled ? "Deactivate" : "Activate"}
                 </Button>
               </div>
 
@@ -807,15 +809,6 @@ export default function AdminDashboard() {
                   <Input 
                     value={authSettings.termsUrl} 
                     onChange={e => setAuthSettings({...authSettings, termsUrl: e.target.value})}
-                    className="bg-brand-paper/50" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">OTP Resend Timer (seconds)</label>
-                  <Input 
-                    type="number" 
-                    value={authSettings.otpTimer} 
-                    onChange={e => setAuthSettings({...authSettings, otpTimer: parseInt(e.target.value) || 0})}
                     className="bg-brand-paper/50" 
                   />
                 </div>
