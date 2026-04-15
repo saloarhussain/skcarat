@@ -109,48 +109,43 @@ export default function Navbar() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 md:gap-4 shrink-0">
+            <div className="flex items-center gap-1 md:gap-2 shrink-0">
             <Link to="/wishlist">
-              <Button variant="ghost" size="icon" className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors">
                 <Heart className="h-5 w-5" />
-                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Wishlist</span>
               </Button>
             </Link>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" className="relative hover:text-brand-gold transition-colors">
                 <div className="relative">
                   <ShoppingBag className="h-5 w-5" />
                   <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-paper">
                     0
                   </span>
                 </div>
-                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Cart</span>
               </Button>
             </Link>
  
             {loading ? (
-              <div className="flex flex-col h-auto py-1 gap-0.5 items-center px-2">
+              <div className="flex items-center justify-center w-10 h-10">
                 <div className="h-5 w-5 animate-pulse rounded-full bg-brand-dark/10" />
-                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block text-brand-dark/20">Loading</span>
               </div>
             ) : user ? (
               <Link to="/profile">
-                <Button variant="ghost" size="icon" className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
-                  <div className="h-5 w-5 overflow-hidden rounded-full border border-brand-dark/10">
+                <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors">
+                  <div className="h-6 w-6 overflow-hidden rounded-full border border-brand-dark/10">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt={user.displayName || 'User'} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <User className="h-full w-full p-0.5" />
                     )}
                   </div>
-                  <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Account</span>
                 </Button>
               </Link>
             ) : (
-              <Button variant="ghost" size="icon" onClick={() => setIsLoginModalOpen(true)} className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" onClick={() => setIsLoginModalOpen(true)} className="hover:text-brand-gold transition-colors">
                 <User className="h-5 w-5" />
-                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Login</span>
               </Button>
             )}
           </div>
