@@ -3,6 +3,8 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+import { toast } from 'sonner';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -47,8 +49,11 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } else {
           setIsAdmin(false);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Auth state change error:", error);
+        if (error.code === 'permission-denied') {
+          toast.error("Database access denied. Please check Firestore security rules.");
+        }
       } finally {
         setLoading(false);
       }

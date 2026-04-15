@@ -80,9 +80,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         if (!userCredential.user.emailVerified) {
-          toast.warning("Please verify your email address. A verification link was sent to your inbox.");
-          // Optionally resend verification
-          // await sendEmailVerification(userCredential.user);
+          toast.warning("Please verify your email address.", {
+            description: "A verification link was sent to your inbox.",
+            action: {
+              label: "Resend Email",
+              onClick: () => sendEmailVerification(userCredential.user).then(() => toast.success("Verification email resent!"))
+            }
+          });
         } else {
           toast.success("Logged in successfully");
           onClose();
@@ -91,14 +95,31 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     } catch (error: any) {
       console.error("Auth Error:", error);
       let message = "Authentication failed";
-      if (error.code === 'auth/user-not-found') message = "No account found with this email";
-      if (error.code === 'auth/wrong-password') message = "Incorrect password";
-      if (error.code === 'auth/email-already-in-use') {
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        message = "This domain is not authorized in Firebase. Please add this URL to 'Authorized domains' in Firebase Console.";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "No account found with this email";
+      } else if (error.code === 'auth/wrong-password') {
+        message = "Incorrect password";
+      } else if (error.code === 'auth/email-already-in-use') {
         message = "This email is already registered. Please login instead.";
         setMode('login');
+      } else if (error.code === 'auth/weak-password') {
+        message = "Password should be at least 6 characters";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "Too many failed attempts. Please try again later.";
+      } else {
+        message = error.message || "Authentication failed";
       }
-      if (error.code === 'auth/weak-password') message = "Password should be at least 6 characters";
-      toast.error(message);
+      
+      toast.error(message, {
+        duration: 5000,
+        action: error.code === 'auth/unauthorized-domain' ? {
+          label: "How to fix?",
+          onClick: () => window.open('https://firebase.google.com/docs/auth/web/redirect-best-practices#add-domain', '_blank')
+        } : undefined
+      });
     } finally {
       setLoading(false);
     }
