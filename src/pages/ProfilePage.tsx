@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Package, Heart, Star, Gift, Settings, LogOut, ChevronRight, LogIn } from 'lucide-react';
+import { User, Package, Heart, Star, Gift, Settings, LogOut, ChevronRight, LogIn, ShieldCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +19,7 @@ import { seedProducts } from '@/seed';
 export default function ProfilePage() {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('loyalty');
   const [isSeeding, setIsSeeding] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [profileData, setProfileData] = useState({
@@ -88,6 +89,18 @@ export default function ProfilePage() {
     { id: 'ORD-6542', date: '2023-11-20', total: 450, status: 'Delivered', items: 1 },
   ];
 
+  const sidebarItems = [
+    { icon: User, label: 'Personal Info', value: 'personal' },
+    { icon: Package, label: 'My Orders', value: 'orders' },
+    { icon: Heart, label: 'Wishlist', value: 'wishlist' },
+    { icon: Gift, label: 'Loyalty Program', value: 'loyalty' },
+    { icon: Settings, label: 'Settings', value: 'settings' },
+  ];
+
+  if (isAdmin) {
+    sidebarItems.push({ icon: ShieldCheck, label: 'Admin Panel', value: 'admin' });
+  }
+
   return (
     <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32 py-12">
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-4">
@@ -110,33 +123,16 @@ export default function ProfilePage() {
             </div>
 
             <nav className="flex flex-col gap-1">
-              {[
-                { icon: User, label: 'Personal Info', active: true },
-                { icon: Package, label: 'My Orders' },
-                { icon: Heart, label: 'Wishlist', href: '/wishlist' },
-                { icon: Gift, label: 'Loyalty Program' },
-                { icon: Settings, label: 'Settings' },
-              ].map((item, i) => {
+              {sidebarItems.map((item, i) => {
                 const Icon = item.icon;
-                if (item.href) {
-                  return (
-                    <Link
-                      key={i}
-                      to={item.href}
-                      className={cn(
-                        buttonVariants({ variant: item.active ? 'secondary' : 'ghost' }),
-                        "justify-start gap-3 rounded-lg"
-                      )}
-                    >
-                      <Icon className="h-4 w-4" /> {item.label}
-                    </Link>
-                  );
-                }
+                const isActive = activeTab === item.value;
+
                 return (
                   <Button
                     key={i}
-                    variant={item.active ? 'secondary' : 'ghost'}
+                    variant={isActive ? 'secondary' : 'ghost'}
                     className="justify-start gap-3 rounded-lg"
+                    onClick={() => setActiveTab(item.value)}
                   >
                     <Icon className="h-4 w-4" /> {item.label}
                   </Button>
@@ -151,23 +147,39 @@ export default function ProfilePage() {
         </aside>
 
         {/* Main Content */}
-        <div className="lg:col-span-3">
-          <Tabs defaultValue="loyalty" className="w-full">
-            <TabsList className="mb-8 w-full justify-start border-b border-brand-dark/10 bg-transparent p-0">
-              <TabsTrigger value="loyalty" className="rounded-none border-b-2 border-transparent px-8 pb-3 pt-0 data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-brand-gold">
-                Loyalty & Rewards
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="rounded-none border-b-2 border-transparent px-8 pb-3 pt-0 data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-brand-gold">
-                Order History
-              </TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="admin" className="rounded-none border-b-2 border-transparent px-8 pb-3 pt-0 data-[state=active]:border-brand-gold data-[state=active]:bg-transparent data-[state=active]:text-brand-gold">
-                  Admin Actions
-                </TabsTrigger>
-              )}
-            </TabsList>
+        <div className="lg:col-span-3 min-h-[500px]">
+          {activeTab === 'personal' && (
+            <Card className="border-brand-dark/10 bg-white">
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>Manage your personal details and account information.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Full Name</p>
+                    <p className="font-medium">{user.displayName || 'Not provided'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Email Address</p>
+                    <p className="font-medium">{user.email}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Phone Number</p>
+                    <p className="font-medium">Not provided</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Member Since</p>
+                    <p className="font-medium">April 2024</p>
+                  </div>
+                </div>
+                <Button variant="outline" className="rounded-full">Edit Profile</Button>
+              </CardContent>
+            </Card>
+          )}
 
-            <TabsContent value="loyalty" className="flex flex-col gap-8">
+          {activeTab === 'loyalty' && (
+            <div className="flex flex-col gap-8">
               {/* Loyalty Progress */}
               <Card className="border-none bg-brand-dark text-white shadow-lg">
                 <CardHeader>
@@ -224,61 +236,122 @@ export default function ProfilePage() {
                   </Card>
                 ))}
               </div>
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="orders">
-              <div className="flex flex-col gap-4">
-                {orders.map((order) => (
-                  <div key={order.id} className="flex flex-col gap-4 rounded-xl border border-brand-dark/10 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-bold text-brand-dark">{order.id}</span>
-                      <span className="text-xs text-brand-dark/60">{order.date} • {order.items} item(s)</span>
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <div className="flex flex-col text-right">
-                        <span className="text-lg font-semibold">${order.total.toLocaleString()}</span>
-                        <span className="text-xs text-green-600">{order.status}</span>
-                      </div>
-                      <Button variant="ghost" size="icon">
-                        <ChevronRight className="h-5 w-5" />
-                      </Button>
-                    </div>
+          {activeTab === 'orders' && (
+            <div className="flex flex-col gap-4">
+              {orders.map((order) => (
+                <div key={order.id} className="flex flex-col gap-4 rounded-xl border border-brand-dark/10 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-bold text-brand-dark">{order.id}</span>
+                    <span className="text-xs text-brand-dark/60">{order.date} • {order.items} item(s)</span>
                   </div>
-                ))}
-              </div>
-            </TabsContent>
+                  <div className="flex items-center gap-8">
+                    <div className="flex flex-col text-right">
+                      <span className="text-lg font-semibold">${order.total.toLocaleString()}</span>
+                      <span className="text-xs text-green-600">{order.status}</span>
+                    </div>
+                    <Button variant="ghost" size="icon">
+                      <ChevronRight className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-            {isAdmin && (
-              <TabsContent value="admin">
-                <Card className="border-brand-dark/10 bg-white">
-                  <CardHeader>
-                    <CardTitle>Database Management</CardTitle>
-                    <CardDescription>Perform administrative tasks for the application.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
-                      <div>
-                        <h4 className="font-medium">Product Management</h4>
-                        <p className="text-sm text-brand-dark/60">Manage products, prices, and exclusive offers.</p>
+          {activeTab === 'wishlist' && (
+            <Card className="border-brand-dark/10 bg-white">
+              <CardHeader>
+                <CardTitle>My Wishlist</CardTitle>
+                <CardDescription>Items you've saved for later.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  {MOCK_PRODUCTS.slice(0, 2).map((product) => (
+                    <div key={product.id} className="group relative flex flex-col gap-3">
+                      <div className="aspect-square overflow-hidden rounded-xl bg-brand-champagne/20">
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.name} 
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
                       </div>
-                      <Link to="/admin" className={cn(buttonVariants(), "bg-brand-gold text-white")}>
-                        Go to Dashboard
-                      </Link>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
                       <div>
-                        <h4 className="font-medium">Seed Products</h4>
-                        <p className="text-sm text-brand-dark/60">Populate the Firestore database with initial mock products.</p>
+                        <h4 className="font-medium">{product.name}</h4>
+                        <p className="text-sm text-brand-gold">${product.price.toLocaleString()}</p>
                       </div>
-                      <Button onClick={handleSeed} disabled={isSeeding} className="bg-brand-gold text-white">
-                        {isSeeding ? 'Seeding...' : 'Seed Now'}
-                      </Button>
+                      <Button variant="outline" size="sm" className="w-full rounded-full">Add to Cart</Button>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-          </Tabs>
+                  ))}
+                </div>
+                <div className="mt-8 text-center">
+                  <Link to="/products" className="text-sm font-medium text-brand-gold hover:underline">
+                    Browse more products
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'settings' && (
+            <Card className="border-brand-dark/10 bg-white">
+              <CardHeader>
+                <CardTitle>Account Settings</CardTitle>
+                <CardDescription>Manage your account preferences and security.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Email Notifications</p>
+                      <p className="text-sm text-brand-dark/60">Receive updates about your orders and rewards.</p>
+                    </div>
+                    <Button variant="outline" size="sm">Enabled</Button>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Password</p>
+                      <p className="text-sm text-brand-dark/60">Change your account password.</p>
+                    </div>
+                    <Button variant="outline" size="sm">Update</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'admin' && isAdmin && (
+            <Card className="border-brand-dark/10 bg-white">
+              <CardHeader>
+                <CardTitle>Database Management</CardTitle>
+                <CardDescription>Perform administrative tasks for the application.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                  <div>
+                    <h4 className="font-medium">Product Management</h4>
+                    <p className="text-sm text-brand-dark/60">Manage products, prices, and exclusive offers.</p>
+                  </div>
+                  <Link to="/admin" className={cn(buttonVariants(), "bg-brand-gold text-white")}>
+                    Go to Dashboard
+                  </Link>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                  <div>
+                    <h4 className="font-medium">Seed Products</h4>
+                    <p className="text-sm text-brand-dark/60">Populate the Firestore database with initial mock products.</p>
+                  </div>
+                  <Button onClick={handleSeed} disabled={isSeeding} className="bg-brand-gold text-white">
+                    {isSeeding ? 'Seeding...' : 'Seed Now'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

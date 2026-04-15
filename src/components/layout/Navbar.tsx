@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingBag, Heart, User, Menu, X, MapPin, LogIn } from 'lucide-react';
+import { Search, ShoppingBag, Heart, User, Menu, X, MapPin, LogIn, ShieldCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -12,11 +12,14 @@ import { auth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { toast } from 'sonner';
 import LoginModal from '@/components/auth/LoginModal';
+import PincodeModal from './PincodeModal';
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const { user, loading } = useAuth();
+  const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
+  const [selectedPincode, setSelectedPincode] = useState<string | null>(null);
+  const { user, loading, isAdmin } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -65,6 +68,19 @@ export default function Navbar() {
                       </Link>
                     ))}
                     <Separator className="my-4 bg-brand-dark/10 -ml-6" />
+                    
+                    <button 
+                      onClick={() => setIsPincodeModalOpen(true)}
+                      className="flex items-center gap-3 text-xl font-medium hover:text-brand-gold transition-colors"
+                    >
+                      <MapPin className="h-5 w-5 text-brand-gold" />
+                      <div className="flex flex-col items-start leading-none">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-brand-dark/40">Deliver to</span>
+                        <span className="text-lg">{selectedPincode || 'Enter Pincode'}</span>
+                      </div>
+                    </button>
+
+                    <Separator className="my-4 bg-brand-dark/10 -ml-6" />
                     {user ? (
                       <Link to="/profile" className="text-xl font-medium hover:text-brand-gold transition-colors">
                         My Account
@@ -87,13 +103,18 @@ export default function Navbar() {
                 </span>
               </Link>
 
-              <div className="hidden lg:flex items-center gap-2 rounded-md border border-brand-dark/10 px-3 py-1.5 text-left transition-colors hover:bg-white">
+              <button 
+                onClick={() => setIsPincodeModalOpen(true)}
+                className="hidden lg:flex items-center gap-2 rounded-md border border-brand-dark/10 px-3 py-1.5 text-left transition-colors hover:bg-white"
+              >
                 <MapPin className="h-4 w-4 text-brand-gold" />
                 <div className="flex flex-col leading-none">
                   <span className="text-[9px] font-bold uppercase tracking-tighter text-brand-dark/40">Deliver to</span>
-                  <span className="text-[11px] font-bold text-brand-dark">Enter Pincode</span>
+                  <span className="text-[11px] font-bold text-brand-dark">
+                    {selectedPincode || 'Enter Pincode'}
+                  </span>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Search Bar (Desktop) */}
@@ -127,6 +148,14 @@ export default function Navbar() {
               </Button>
             </Link>
  
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="ghost" size="icon" className="text-brand-gold hover:bg-brand-gold/10 transition-colors">
+                  <ShieldCheck className="h-5 w-5" />
+                </Button>
+              </Link>
+            )}
+
             {loading ? (
               <div className="flex items-center justify-center w-10 h-10">
                 <div className="h-5 w-5 animate-pulse rounded-full bg-brand-dark/10" />
@@ -152,6 +181,11 @@ export default function Navbar() {
         </div>
 
         <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+        <PincodeModal 
+          isOpen={isPincodeModalOpen} 
+          onClose={() => setIsPincodeModalOpen(false)} 
+          onSelect={setSelectedPincode}
+        />
 
         {/* Mobile Search Row */}
         <div className="md:hidden px-4 pb-4">

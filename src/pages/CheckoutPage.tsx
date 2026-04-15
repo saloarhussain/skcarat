@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, CreditCard, Truck, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,13 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { db } from '@/firebase';
+import { db, auth } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/providers/FirebaseProvider';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 
 declare global {
   interface Window {
     Razorpay: any;
+    recaptchaVerifier: RecaptchaVerifier | undefined;
   }
 }
 
@@ -22,6 +24,11 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod'>('online');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState<'email' | 'phone' | null>(null);
+  const [otp, setOtp] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(user?.emailVerified || false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [formData, setFormData] = useState({
     email: user?.email || '',
     firstName: user?.displayName?.split(' ')[0] || '',
@@ -32,12 +39,100 @@ export default function CheckoutPage() {
     phone: '',
   });
 
+  const recaptchaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!window.recaptchaVerifier && recaptchaRef.current) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {
+          console.log('reCAPTCHA verified');
+        }
+      });
+    }
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'email') setIsEmailVerified(false);
+    if (name === 'phone') setIsPhoneVerified(false);
   };
 
-  const nextStep = () => setStep(prev => prev + 1);
+  const startVerification = async (type: 'email' | 'phone') => {
+    if (type === 'email') {
+      if (!formData.email) {
+        toast.error('Please enter an email address first');
+        return;
+      }
+      // Email verification is usually handled via link or simulated for this demo
+      // Real Firebase email verification requires sendEmailVerification(auth.currentUser)
+      setIsVerifying('email');
+      setOtp('');
+      toast.info(`Verification code sent to ${formData.email} (Simulated: 123456)`);
+    } else {
+      if (!formData.phone) {
+        toast.error('Please enter a phone number first');
+        return;
+      }
+      
+      try {
+        const appVerifier = window.recaptchaVerifier;
+        if (!appVerifier) throw new Error('reCAPTCHA not initialized');
+
+        const result = await signInWithPhoneNumber(auth, formData.phone, appVerifier);
+        setConfirmationResult(result);
+        setIsVerifying('phone');
+        setOtp('');
+        toast.success(`Verification code sent to ${formData.phone}`);
+      } catch (error: any) {
+        console.error('Phone Auth Error:', error);
+        toast.error(error.message || 'Failed to send verification code. Ensure phone number is in international format (e.g., +91...)');
+        // Reset reCAPTCHA if it fails
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = undefined;
+        }
+      }
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (isVerifying === 'email') {
+      if (otp === '123456') {
+        setIsEmailVerified(true);
+        setIsVerifying(null);
+        toast.success('Email verified successfully!');
+      } else {
+        toast.error('Invalid code. Use 123456');
+      }
+      return;
+    }
+
+    if (isVerifying === 'phone' && confirmationResult) {
+      try {
+        await confirmationResult.confirm(otp);
+        setIsPhoneVerified(true);
+        setIsVerifying(null);
+        toast.success('Phone number verified successfully!');
+      } catch (error: any) {
+        console.error('OTP Verification Error:', error);
+        toast.error('Invalid verification code. Please try again.');
+      }
+    }
+  };
+
+  const nextStep = () => {
+    if (!isEmailVerified) {
+      toast.error('Please verify your email address to continue');
+      return;
+    }
+    if (!isPhoneVerified) {
+      toast.error('Please verify your phone number to continue');
+      return;
+    }
+    setStep(prev => prev + 1);
+  };
   const prevStep = () => setStep(prev => prev - 1);
 
   const handleCODPayment = async () => {
@@ -203,6 +298,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32 py-12">
+      <div id="recaptcha-container" ref={recaptchaRef}></div>
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <Link to="/cart" className="flex items-center text-sm font-medium text-brand-dark/60 hover:text-brand-gold">
@@ -217,6 +313,52 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
           <div className="lg:col-span-2">
+            {isVerifying && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+                  <div className="mb-6 text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-gold/10 text-brand-gold">
+                      <ShieldCheck className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-2xl font-serif">Verify {isVerifying === 'email' ? 'Email' : 'Phone'}</h3>
+                    <p className="text-sm text-brand-dark/60 mt-2">
+                      Enter the 6-digit code sent to <br/>
+                      <span className="font-bold text-brand-dark">
+                        {isVerifying === 'email' ? formData.email : formData.phone}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    <Input 
+                      type="text" 
+                      maxLength={6} 
+                      value={otp} 
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter 6-digit code"
+                      className="h-14 text-center text-2xl tracking-[0.5em] font-bold"
+                    />
+                    <div className="flex gap-3">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsVerifying(null)}
+                        className="flex-1 rounded-full py-6"
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={verifyOtp}
+                        className="flex-1 bg-brand-gold text-white rounded-full py-6"
+                      >
+                        Verify
+                      </Button>
+                    </div>
+                    <p className="text-center text-xs text-brand-dark/40">
+                      Didn't receive the code? <button type="button" className="text-brand-gold hover:underline">Resend</button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-8 shadow-sm">
               {step === 1 && (
                 <div className="space-y-6">
@@ -236,7 +378,31 @@ export default function CheckoutPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Email Address</label>
-                    <Input name="email" type="email" required value={formData.email} onChange={handleInputChange} placeholder="john@example.com" />
+                    <div className="flex gap-2">
+                      <Input 
+                        name="email" 
+                        type="email" 
+                        required 
+                        value={formData.email} 
+                        onChange={handleInputChange} 
+                        placeholder="john@example.com" 
+                        className={cn(isEmailVerified && "border-green-500 bg-green-50")}
+                      />
+                      {!isEmailVerified ? (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => startVerification('email')}
+                          className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                        >
+                          Verify
+                        </Button>
+                      ) : (
+                        <div className="flex items-center px-3 text-green-600">
+                          <CheckCircle2 className="h-5 w-5" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Street Address</label>
@@ -254,7 +420,31 @@ export default function CheckoutPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Phone Number</label>
-                    <Input name="phone" type="tel" required value={formData.phone} onChange={handleInputChange} placeholder="+91 98765 43210" />
+                    <div className="flex gap-2">
+                      <Input 
+                        name="phone" 
+                        type="tel" 
+                        required 
+                        value={formData.phone} 
+                        onChange={handleInputChange} 
+                        placeholder="+91 98765 43210" 
+                        className={cn(isPhoneVerified && "border-green-500 bg-green-50")}
+                      />
+                      {!isPhoneVerified ? (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => startVerification('phone')}
+                          className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                        >
+                          Verify
+                        </Button>
+                      ) : (
+                        <div className="flex items-center px-3 text-green-600">
+                          <CheckCircle2 className="h-5 w-5" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <Button type="submit" className="w-full bg-brand-dark text-white rounded-full py-6 mt-4">
                     Continue to Payment
