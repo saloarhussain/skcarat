@@ -1,0 +1,191 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, ShoppingBag, Heart, User, Menu, X, MapPin, LogIn } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/providers/FirebaseProvider';
+import { auth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { toast } from 'sonner';
+import LoginModal from '@/components/auth/LoginModal';
+
+export default function Navbar() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const { user, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast.success('Signed out successfully');
+    } catch (error) {
+      toast.error('Failed to sign out');
+    }
+  };
+
+  const navLinks = [
+    { name: 'New Arrivals', href: '/products?filter=new' },
+    { name: 'Rings', href: '/products?category=rings' },
+    { name: 'Necklaces', href: '/products?category=necklaces' },
+    { name: 'Earrings', href: '/products?category=earrings' },
+    { name: 'Bracelets', href: '/products?category=bracelets' },
+    { name: 'Blog', href: '/blog' },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 w-full">
+      {/* Top Banner */}
+      <div className="bg-brand-champagne/30 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-brand-dark">
+        0% Making Charges on Gold Jewellery!
+      </div>
+
+      <nav className="w-full border-b border-brand-dark/10 bg-brand-paper/95 backdrop-blur-md">
+        <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32">
+          {/* Top Row: Logo, Search, Actions */}
+          <div className="flex h-16 md:h-20 items-center justify-between gap-4 md:gap-8">
+            {/* Mobile Menu Trigger */}
+            <div className="flex md:hidden">
+              <Sheet>
+                <SheetTrigger render={<Button variant="ghost" size="icon" />}>
+                  <Menu className="h-6 w-6" />
+                </SheetTrigger>
+                <SheetContent side="left" className="bg-brand-paper">
+                  <div className="mt-12 flex flex-col gap-6 pl-6">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        to={link.href}
+                        className="text-xl font-medium hover:text-brand-gold transition-colors"
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                    <Separator className="my-4 bg-brand-dark/10 -ml-6" />
+                    {user ? (
+                      <Link to="/profile" className="text-xl font-medium hover:text-brand-gold transition-colors">
+                        My Account
+                      </Link>
+                    ) : (
+                      <button onClick={() => setIsLoginModalOpen(true)} className="text-left text-xl font-medium hover:text-brand-gold transition-colors">
+                        Login / Sign Up
+                      </button>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Logo & Delivery */}
+            <div className="flex items-center gap-4 shrink-0">
+              <Link to="/" className="flex items-center gap-2">
+                <span className="font-serif text-2xl md:text-3xl font-bold tracking-tighter text-brand-dark">
+                  AURA
+                </span>
+              </Link>
+
+              <div className="hidden lg:flex items-center gap-2 rounded-md border border-brand-dark/10 px-3 py-1.5 text-left transition-colors hover:bg-white">
+                <MapPin className="h-4 w-4 text-brand-gold" />
+                <div className="flex flex-col leading-none">
+                  <span className="text-[9px] font-bold uppercase tracking-tighter text-brand-dark/40">Deliver to</span>
+                  <span className="text-[11px] font-bold text-brand-dark">Enter Pincode</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Bar (Desktop) */}
+            <div className="hidden md:flex relative flex-1 max-w-xl">
+              <Input
+                type="text"
+                placeholder='Search "Necklaces", "Rings" or "Earrings"'
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-full border-brand-dark/10 bg-white pl-4 pr-10 rounded-md focus-visible:ring-brand-gold focus-visible:border-brand-gold text-sm shadow-sm"
+              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-dark/40" />
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 md:gap-4 shrink-0">
+            <Link to="/wishlist">
+              <Button variant="ghost" size="icon" className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+                <Heart className="h-5 w-5" />
+                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Wishlist</span>
+              </Button>
+            </Link>
+
+            <Link to="/cart">
+              <Button variant="ghost" size="icon" className="relative flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+                <div className="relative">
+                  <ShoppingBag className="h-5 w-5" />
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-paper">
+                    0
+                  </span>
+                </div>
+                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Cart</span>
+              </Button>
+            </Link>
+ 
+            {loading ? (
+              <div className="flex flex-col h-auto py-1 gap-0.5 items-center px-2">
+                <div className="h-5 w-5 animate-pulse rounded-full bg-brand-dark/10" />
+                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block text-brand-dark/20">Loading</span>
+              </div>
+            ) : user ? (
+              <Link to="/profile">
+                <Button variant="ghost" size="icon" className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+                  <div className="h-5 w-5 overflow-hidden rounded-full border border-brand-dark/10">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt={user.displayName || 'User'} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <User className="h-full w-full p-0.5" />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Account</span>
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="ghost" size="icon" onClick={() => setIsLoginModalOpen(true)} className="flex flex-col h-auto py-1 gap-0.5 hover:text-brand-gold transition-colors">
+                <User className="h-5 w-5" />
+                <span className="text-[10px] font-medium uppercase tracking-tighter hidden lg:block">Login</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+
+        {/* Mobile Search Row */}
+        <div className="md:hidden px-4 pb-4">
+          <div className="relative w-full">
+            <Input
+              type="text"
+              placeholder='Search "Necklaces", "Rings" or "Earrings"'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 w-full border-brand-dark/10 bg-white pl-4 pr-10 rounded-md focus-visible:ring-brand-gold focus-visible:border-brand-gold text-sm shadow-sm"
+            />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-dark/40" />
+          </div>
+        </div>
+
+        {/* Bottom Row: Category Links (Desktop Only) */}
+        <div className="hidden md:flex h-10 items-center justify-center gap-8 border-t border-brand-dark/5">
+          {navLinks.map((link) => (
+            <Link
+              key={link.name}
+              to={link.href}
+              className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-dark/70 hover:text-brand-gold transition-colors"
+            >
+              {link.name}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </nav>
+  </header>
+);
+}
