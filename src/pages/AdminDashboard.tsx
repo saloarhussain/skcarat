@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/providers/FirebaseProvider';
 import { db } from '@/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, setDoc, getDoc } from 'firebase/firestore';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +71,42 @@ export default function AdminDashboard() {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [authSettings, setAuthSettings] = useState({
+    phoneEnabled: true,
+    googleEnabled: true,
+    whatsappEnabled: false,
+    privacyPolicyUrl: '/privacy-policy',
+    termsUrl: '/terms',
+    otpTimer: 30,
+    supportEmail: 'support@aurajewelry.com',
+    whatsappNumber: '+919876543210'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'auth_config');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setAuthSettings(docSnap.data() as any);
+        }
+      } catch (error) {
+        console.error('Error fetching auth settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const saveAuthSettings = async (newSettings: any) => {
+    try {
+      await setDoc(doc(db, 'settings', 'auth_config'), newSettings);
+      setAuthSettings(newSettings);
+      toast.success('Authentication settings updated');
+    } catch (error) {
+      toast.error('Failed to update settings');
     }
   };
 
@@ -663,8 +699,11 @@ export default function AdminDashboard() {
                       <Phone className="h-5 w-5" />
                     </div>
                     <h3 className="text-xl font-medium">Phone OTP Login</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-green-100 text-green-700">
-                      Active
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      authSettings.phoneEnabled ? "bg-green-100 text-green-700" : "bg-brand-dark/10 text-brand-dark/40"
+                    )}>
+                      {authSettings.phoneEnabled ? "Active" : "Disabled"}
                     </span>
                   </div>
                   <p className="text-sm text-brand-dark/60 max-w-xl">
@@ -674,44 +713,81 @@ export default function AdminDashboard() {
                     <p className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Current Status</p>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2 text-xs">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
-                        <span>Firebase Auth: Connected</span>
+                        <div className={cn("h-2 w-2 rounded-full", authSettings.phoneEnabled ? "bg-green-500" : "bg-brand-dark/20")} />
+                        <span>Firebase Auth: {authSettings.phoneEnabled ? "Connected" : "Disconnected"}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <span>Demo Mode: Auto-fallback enabled (Test OTP: 123456)</span>
-                      </div>
+                      {authSettings.phoneEnabled && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="h-2 w-2 rounded-full bg-blue-500" />
+                          <span>Demo Mode: Auto-fallback enabled (Test OTP: 123456)</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-                <Button className="bg-brand-dark text-white hover:bg-brand-dark/90 w-full md:w-auto">
+                <Button 
+                  onClick={() => {
+                    const el = document.getElementById('login-customization');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="bg-brand-dark text-white hover:bg-brand-dark/90 w-full md:w-auto"
+                >
                   Edit Settings
                 </Button>
               </div>
 
               {/* Social Login Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-2xl bg-white border border-brand-dark/5 space-y-4">
-                  <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => saveAuthSettings({...authSettings, googleEnabled: !authSettings.googleEnabled})}
+                  className={cn(
+                    "p-6 rounded-2xl border transition-all text-left group",
+                    authSettings.googleEnabled ? "bg-white border-brand-dark/5" : "bg-brand-dark/[0.02] border-brand-dark/5 opacity-60"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-4">
                     <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
                     <h4 className="font-medium">Google Login</h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-green-100 text-green-700">Enabled</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      authSettings.googleEnabled ? "bg-green-100 text-green-700" : "bg-brand-dark/10 text-brand-dark/40"
+                    )}>
+                      {authSettings.googleEnabled ? "Enabled" : "Disabled"}
+                    </span>
                   </div>
                   <p className="text-xs text-brand-dark/60">One-tap login using Google accounts. Fully configured and active.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-white border border-brand-dark/5 space-y-4">
-                  <div className="flex items-center gap-3">
+                  <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-brand-gold opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to {authSettings.googleEnabled ? 'Disable' : 'Enable'}
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => saveAuthSettings({...authSettings, whatsappEnabled: !authSettings.whatsappEnabled})}
+                  className={cn(
+                    "p-6 rounded-2xl border transition-all text-left group",
+                    authSettings.whatsappEnabled ? "bg-white border-brand-dark/5" : "bg-brand-dark/[0.02] border-brand-dark/5 opacity-60"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-4">
                     <MessageCircle className="h-5 w-5 text-[#25D366]" />
                     <h4 className="font-medium">WhatsApp Login</h4>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-brand-dark/10 text-brand-dark/40">Coming Soon</span>
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      authSettings.whatsappEnabled ? "bg-green-100 text-green-700" : "bg-brand-dark/10 text-brand-dark/40"
+                    )}>
+                      {authSettings.whatsappEnabled ? "Enabled" : "Coming Soon"}
+                    </span>
                   </div>
                   <p className="text-xs text-brand-dark/60">Direct login via WhatsApp message. Currently in development phase.</p>
-                </div>
+                  <div className="mt-4 text-[10px] font-bold uppercase tracking-widest text-brand-gold opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to {authSettings.whatsappEnabled ? 'Disable' : 'Enable'}
+                  </div>
+                </button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-brand-dark/5 bg-white">
+          <Card id="login-customization" className="border-brand-dark/5 bg-white">
             <CardHeader>
               <CardTitle className="text-xl font-serif">Login Customization</CardTitle>
               <CardDescription>Update the text and links shown in the login modal.</CardDescription>
@@ -720,23 +796,52 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Privacy Policy URL</label>
-                  <Input defaultValue="/privacy-policy" className="bg-brand-paper/50" />
+                  <Input 
+                    value={authSettings.privacyPolicyUrl} 
+                    onChange={e => setAuthSettings({...authSettings, privacyPolicyUrl: e.target.value})}
+                    className="bg-brand-paper/50" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Terms & Conditions URL</label>
-                  <Input defaultValue="/terms" className="bg-brand-paper/50" />
+                  <Input 
+                    value={authSettings.termsUrl} 
+                    onChange={e => setAuthSettings({...authSettings, termsUrl: e.target.value})}
+                    className="bg-brand-paper/50" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">OTP Resend Timer (seconds)</label>
-                  <Input type="number" defaultValue="30" className="bg-brand-paper/50" />
+                  <Input 
+                    type="number" 
+                    value={authSettings.otpTimer} 
+                    onChange={e => setAuthSettings({...authSettings, otpTimer: parseInt(e.target.value) || 0})}
+                    className="bg-brand-paper/50" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">Support Email</label>
-                  <Input defaultValue="support@aurajewelry.com" className="bg-brand-paper/50" />
+                  <Input 
+                    value={authSettings.supportEmail} 
+                    onChange={e => setAuthSettings({...authSettings, supportEmail: e.target.value})}
+                    className="bg-brand-paper/50" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">WhatsApp Business Number</label>
+                  <Input 
+                    value={authSettings.whatsappNumber} 
+                    onChange={e => setAuthSettings({...authSettings, whatsappNumber: e.target.value})}
+                    className="bg-brand-paper/50" 
+                    placeholder="+91..."
+                  />
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button className="bg-brand-gold text-white hover:bg-brand-gold/90">
+                <Button 
+                  onClick={() => saveAuthSettings(authSettings)}
+                  className="bg-brand-gold text-white hover:bg-brand-gold/90"
+                >
                   Update Login UI
                 </Button>
               </div>

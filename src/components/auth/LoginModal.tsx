@@ -32,6 +32,33 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(0);
+  const [settings, setSettings] = useState({
+    phoneEnabled: true,
+    googleEnabled: true,
+    whatsappEnabled: false,
+    privacyPolicyUrl: '/privacy-policy',
+    termsUrl: '/terms',
+    otpTimer: 30,
+    supportEmail: 'support@aurajewelry.com',
+    whatsappNumber: '+919876543210'
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('@/firebase');
+        const docRef = doc(db, 'settings', 'auth_config');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSettings(docSnap.data() as any);
+        }
+      } catch (error) {
+        console.error('Error fetching auth settings:', error);
+      }
+    };
+    if (isOpen) fetchSettings();
+  }, [isOpen]);
 
   useEffect(() => {
     let interval: any;
@@ -71,7 +98,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
         setConfirmationResult(result);
         setStep('otp');
-        setTimer(30);
+        setTimer(settings.otpTimer);
         toast.success("OTP sent successfully");
       } catch (firebaseError: any) {
         console.error("Firebase Phone Auth Error:", firebaseError);
@@ -84,7 +111,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         ) {
           toast.info("Demo Mode: Phone Auth is not enabled in Firebase. Using simulated OTP for testing.");
           setStep('otp');
-          setTimer(30);
+          setTimer(settings.otpTimer);
           // We'll use a dummy confirmation result for demo mode
           setConfirmationResult({
             confirm: async (code: string) => {
@@ -133,7 +160,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   const handleWhatsAppLogin = () => {
-    toast.info("WhatsApp login is coming soon!");
+    if (settings.whatsappEnabled) {
+      const message = encodeURIComponent("I want to login to Aura Jewelry");
+      window.open(`https://wa.me/${settings.whatsappNumber.replace(/\+/g, '')}?text=${message}`, '_blank');
+    } else {
+      toast.info("WhatsApp login is coming soon!");
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -208,33 +240,44 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </Button>
                 </form>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-100" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-4 text-gray-400 font-medium">Or Login Using</span>
-                  </div>
-                </div>
+                {(settings.googleEnabled || settings.whatsappEnabled) && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-gray-100" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-white px-4 text-gray-400 font-medium">Or Login Using</span>
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleWhatsAppLogin}
-                    className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
-                  >
-                    <MessageCircle className="h-5 w-5 text-[#25D366]" />
-                    WhatsApp
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleGoogleLogin}
-                    className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
-                  >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                    Google
-                  </Button>
-                </div>
+                    <div className={cn(
+                      "grid gap-3",
+                      settings.googleEnabled && settings.whatsappEnabled ? "grid-cols-2" : "grid-cols-1"
+                    )}>
+                      {settings.whatsappEnabled && (
+                        <Button
+                          variant="outline"
+                          onClick={handleWhatsAppLogin}
+                          className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
+                        >
+                          <MessageCircle className="h-5 w-5 text-[#25D366]" />
+                          WhatsApp
+                        </Button>
+                      )}
+                      {settings.googleEnabled && (
+                        <Button
+                          variant="outline"
+                          onClick={handleGoogleLogin}
+                          className="h-12 rounded-xl border-gray-200 hover:bg-gray-50 gap-2 font-medium"
+                        >
+                          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+                          Google
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div className="text-center space-y-4">
                   <button className="text-sm font-semibold text-gray-900 underline underline-offset-4">
@@ -242,7 +285,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   </button>
                   <p className="text-[10px] text-gray-400 leading-relaxed">
                     I accept that I have read & understood <br />
-                    <span className="underline">Privacy Policy</span> and <span className="underline">T&Cs</span>.
+                    <a href={settings.privacyPolicyUrl} className="underline">Privacy Policy</a> and <a href={settings.termsUrl} className="underline">T&Cs</a>.
                   </p>
                 </div>
               </motion.div>
