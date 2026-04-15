@@ -33,14 +33,18 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const isDefaultAdmin = currentUser.email === 'business.saloarhussain@gmail.com';
           
           if (!userDoc.exists()) {
-            await setDoc(userDocRef, {
+            const userData: any = {
               uid: currentUser.uid,
               email: currentUser.email,
-              displayName: currentUser.displayName,
-              photoURL: currentUser.photoURL,
               role: isDefaultAdmin ? 'admin' : 'user',
               createdAt: serverTimestamp()
-            });
+            };
+
+            // Only add optional fields if they are not null/undefined
+            if (currentUser.displayName) userData.displayName = currentUser.displayName;
+            if (currentUser.photoURL) userData.photoURL = currentUser.photoURL;
+
+            await setDoc(userDocRef, userData);
             setIsAdmin(isDefaultAdmin);
           } else {
             const data = userDoc.data();

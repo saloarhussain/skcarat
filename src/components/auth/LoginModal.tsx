@@ -14,7 +14,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signOut
 } from "firebase/auth";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
@@ -75,6 +76,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       if (mode === 'signup') {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCredential.user);
+        // Sign out immediately to force them to login after verification
+        await signOut(auth);
         toast.success("Account created! Please check your email for verification.");
         setMode('login');
       } else {

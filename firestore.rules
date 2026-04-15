@@ -95,6 +95,10 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isDefaultAdmin() {
+      return isAuthenticated() && request.auth.token.email == "business.saloarhussain@gmail.com";
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -102,7 +106,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
-                      ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+                      (
+                        (isOwner(userId) && request.resource.data.role == 'user') || 
+                        isAdmin() ||
+                        (isOwner(userId) && isDefaultAdmin() && request.resource.data.role == 'admin')
+                      );
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
                       ((isOwner(userId) && request.resource.data.role == resource.data.role && 
                         request.resource.data.createdAt == resource.data.createdAt) || isAdmin());
