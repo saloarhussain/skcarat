@@ -136,8 +136,14 @@ service cloud.firestore {
 
     match /settings/{settingId} {
       // Restricted settings should only be readable by admins
-      // auth_config could be public if needed for frontend logic
-      allow read: if isAdmin() || settingId == 'auth_config';
+      // auth_config, checkout, and payment configs are needed by the frontend
+      allow read: if isAdmin() || 
+                    settingId == 'auth_config' || 
+                    settingId == 'checkout' || 
+                    settingId == 'razorpay_config' || 
+                    settingId == 'stripe_config' || 
+                    settingId == 'wise_config' || 
+                    settingId == 'cod_config';
       allow write: if isAdmin();
     }
 
