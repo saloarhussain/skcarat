@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { db, auth } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/providers/FirebaseProvider';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 
@@ -29,6 +29,10 @@ export default function CheckoutPage() {
   const [isEmailVerified, setIsEmailVerified] = useState(user?.emailVerified || false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [checkoutSettings, setCheckoutSettings] = useState({
+    emailVerificationEnabled: true,
+    phoneVerificationEnabled: true,
+  });
   const [formData, setFormData] = useState({
     email: user?.email || '',
     firstName: user?.displayName?.split(' ')[0] || '',
@@ -42,14 +46,12 @@ export default function CheckoutPage() {
   const recaptchaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!window.recaptchaVerifier && recaptchaRef.current) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-        callback: () => {
-          console.log('reCAPTCHA verified');
-        }
-      });
-    }
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'checkout'), (doc) => {
+      if (doc.exists()) {
+        setCheckoutSettings(doc.data() as any);
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,8 +67,6 @@ export default function CheckoutPage() {
         toast.error('Please enter an email address first');
         return;
       }
-      // Email verification is usually handled via link or simulated for this demo
-      // Real Firebase email verification requires sendEmailVerification(auth.currentUser)
       setIsVerifying('email');
       setOtp('');
       toast.info(`Verification code sent to ${formData.email} (Simulated: 123456)`);
@@ -77,9 +77,21 @@ export default function CheckoutPage() {
       }
       
       try {
-        const appVerifier = window.recaptchaVerifier;
-        if (!appVerifier) throw new Error('reCAPTCHA not initialized');
+        // Initialize or reset reCAPTCHA
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+            callback: () => {
+              console.log('reCAPTCHA background check complete');
+            },
+            'expired-callback': () => {
+              window.recaptchaVerifier?.clear();
+              window.recaptchaVerifier = undefined;
+            }
+          });
+        }
 
+        const appVerifier = window.recaptchaVerifier;
         const result = await signInWithPhoneNumber(auth, formData.phone, appVerifier);
         setConfirmationResult(result);
         setIsVerifying('phone');
@@ -87,8 +99,13 @@ export default function CheckoutPage() {
         toast.success(`Verification code sent to ${formData.phone}`);
       } catch (error: any) {
         console.error('Phone Auth Error:', error);
-        toast.error(error.message || 'Failed to send verification code. Ensure phone number is in international format (e.g., +91...)');
-        // Reset reCAPTCHA if it fails
+        let message = 'Failed to send verification code.';
+        if (error.code === 'auth/invalid-phone-number') message = 'Invalid phone number format. Use +91...';
+        if (error.code === 'auth/too-many-requests') message = 'Too many attempts. Please try again later.';
+        
+        toast.error(message);
+        
+        // Reset reCAPTCHA on error
         if (window.recaptchaVerifier) {
           window.recaptchaVerifier.clear();
           window.recaptchaVerifier = undefined;
@@ -123,11 +140,11 @@ export default function CheckoutPage() {
   };
 
   const nextStep = () => {
-    if (!isEmailVerified) {
+    if (checkoutSettings.emailVerificationEnabled && !isEmailVerified) {
       toast.error('Please verify your email address to continue');
       return;
     }
-    if (!isPhoneVerified) {
+    if (checkoutSettings.phoneVerificationEnabled && !isPhoneVerified) {
       toast.error('Please verify your phone number to continue');
       return;
     }
@@ -386,21 +403,23 @@ export default function CheckoutPage() {
                         value={formData.email} 
                         onChange={handleInputChange} 
                         placeholder="john@example.com" 
-                        className={cn(isEmailVerified && "border-green-500 bg-green-50")}
+                        className={cn(checkoutSettings.emailVerificationEnabled && isEmailVerified && "border-green-500 bg-green-50")}
                       />
-                      {!isEmailVerified ? (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => startVerification('email')}
-                          className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
-                        >
-                          Verify
-                        </Button>
-                      ) : (
-                        <div className="flex items-center px-3 text-green-600">
-                          <CheckCircle2 className="h-5 w-5" />
-                        </div>
+                      {checkoutSettings.emailVerificationEnabled && (
+                        !isEmailVerified ? (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => startVerification('email')}
+                            className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                          >
+                            Verify
+                          </Button>
+                        ) : (
+                          <div className="flex items-center px-3 text-green-600">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                        )
                       )}
                     </div>
                   </div>
@@ -428,21 +447,23 @@ export default function CheckoutPage() {
                         value={formData.phone} 
                         onChange={handleInputChange} 
                         placeholder="+91 98765 43210" 
-                        className={cn(isPhoneVerified && "border-green-500 bg-green-50")}
+                        className={cn(checkoutSettings.phoneVerificationEnabled && isPhoneVerified && "border-green-500 bg-green-50")}
                       />
-                      {!isPhoneVerified ? (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => startVerification('phone')}
-                          className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
-                        >
-                          Verify
-                        </Button>
-                      ) : (
-                        <div className="flex items-center px-3 text-green-600">
-                          <CheckCircle2 className="h-5 w-5" />
-                        </div>
+                      {checkoutSettings.phoneVerificationEnabled && (
+                        !isPhoneVerified ? (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => startVerification('phone')}
+                            className="shrink-0 border-brand-gold text-brand-gold hover:bg-brand-gold hover:text-white"
+                          >
+                            Verify
+                          </Button>
+                        ) : (
+                          <div className="flex items-center px-3 text-green-600">
+                            <CheckCircle2 className="h-5 w-5" />
+                          </div>
+                        )
                       )}
                     </div>
                   </div>

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/providers/FirebaseProvider';
 import { auth, db } from '@/firebase';
 import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import LoginModal from '@/components/auth/LoginModal';
 
@@ -19,9 +19,39 @@ import { seedProducts } from '@/seed';
 export default function ProfilePage() {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('loyalty');
+  const [activeTab, setActiveTab] = useState('personal');
   const [isSeeding, setIsSeeding] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [checkoutSettings, setCheckoutSettings] = useState({
+    emailVerificationEnabled: true,
+    phoneVerificationEnabled: true,
+  });
+
+  useEffect(() => {
+    if (isAdmin) {
+      const unsubscribe = onSnapshot(doc(db, 'settings', 'checkout'), (doc) => {
+        if (doc.exists()) {
+          setCheckoutSettings(doc.data() as any);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [isAdmin]);
+
+  const toggleSetting = async (key: 'emailVerificationEnabled' | 'phoneVerificationEnabled') => {
+    try {
+      const newSettings = {
+        ...checkoutSettings,
+        [key]: !checkoutSettings[key],
+        updatedAt: new Date().toISOString(),
+      };
+      await setDoc(doc(db, 'settings', 'checkout'), newSettings);
+      toast.success('Setting updated successfully');
+    } catch (error) {
+      console.error('Error updating setting:', error);
+      toast.error('Failed to update setting');
+    }
+  };
   const [profileData, setProfileData] = useState({
     loyaltyPoints: 450,
     tier: 'Gold',
@@ -327,27 +357,66 @@ export default function ProfilePage() {
           {activeTab === 'admin' && isAdmin && (
             <Card className="border-brand-dark/10 bg-white">
               <CardHeader>
-                <CardTitle>Database Management</CardTitle>
-                <CardDescription>Perform administrative tasks for the application.</CardDescription>
+                <CardTitle>Admin Controls</CardTitle>
+                <CardDescription>Manage application settings and database.</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
-                  <div>
-                    <h4 className="font-medium">Product Management</h4>
-                    <p className="text-sm text-brand-dark/60">Manage products, prices, and exclusive offers.</p>
+              <CardContent className="flex flex-col gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Checkout Verification</h3>
+                  <div className="grid gap-4">
+                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                      <div>
+                        <h4 className="font-medium">Email OTP Verification</h4>
+                        <p className="text-sm text-brand-dark/60">Require users to verify their email during checkout.</p>
+                      </div>
+                      <Button 
+                        onClick={() => toggleSetting('emailVerificationEnabled')}
+                        variant={checkoutSettings.emailVerificationEnabled ? "default" : "outline"}
+                        className={cn(checkoutSettings.emailVerificationEnabled ? "bg-green-600 hover:bg-green-700" : "")}
+                      >
+                        {checkoutSettings.emailVerificationEnabled ? 'Enabled' : 'Disabled'}
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                      <div>
+                        <h4 className="font-medium">Mobile OTP Verification</h4>
+                        <p className="text-sm text-brand-dark/60">Require users to verify their phone number during checkout.</p>
+                      </div>
+                      <Button 
+                        onClick={() => toggleSetting('phoneVerificationEnabled')}
+                        variant={checkoutSettings.phoneVerificationEnabled ? "default" : "outline"}
+                        className={cn(checkoutSettings.phoneVerificationEnabled ? "bg-green-600 hover:bg-green-700" : "")}
+                      >
+                        {checkoutSettings.phoneVerificationEnabled ? 'Enabled' : 'Disabled'}
+                      </Button>
+                    </div>
                   </div>
-                  <Link to="/admin" className={cn(buttonVariants(), "bg-brand-gold text-white")}>
-                    Go to Dashboard
-                  </Link>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
-                  <div>
-                    <h4 className="font-medium">Seed Products</h4>
-                    <p className="text-sm text-brand-dark/60">Populate the Firestore database with initial mock products.</p>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Database Actions</h3>
+                  <div className="grid gap-4">
+                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                      <div>
+                        <h4 className="font-medium">Product Management</h4>
+                        <p className="text-sm text-brand-dark/60">Manage products, prices, and exclusive offers.</p>
+                      </div>
+                      <Link to="/admin" className={cn(buttonVariants(), "bg-brand-gold text-white")}>
+                        Go to Dashboard
+                      </Link>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-brand-dark/5 p-4">
+                      <div>
+                        <h4 className="font-medium">Seed Products</h4>
+                        <p className="text-sm text-brand-dark/60">Populate the Firestore database with initial mock products.</p>
+                      </div>
+                      <Button onClick={handleSeed} disabled={isSeeding} className="bg-brand-gold text-white">
+                        {isSeeding ? 'Seeding...' : 'Seed Now'}
+                      </Button>
+                    </div>
                   </div>
-                  <Button onClick={handleSeed} disabled={isSeeding} className="bg-brand-gold text-white">
-                    {isSeeding ? 'Seeding...' : 'Seed Now'}
-                  </Button>
                 </div>
               </CardContent>
             </Card>

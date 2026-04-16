@@ -20,6 +20,7 @@
     @apply font-serif;
   }
 }
+
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
@@ -141,11 +142,16 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
+}
+
+/* Hide reCAPTCHA badge */
+.grecaptcha-badge { 
+  visibility: hidden !important; 
 }

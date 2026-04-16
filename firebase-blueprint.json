@@ -53,9 +53,37 @@
         "addedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["productId"]
+    },
+    "AppSettings": {
+      "title": "App Settings",
+      "description": "Global application configuration.",
+      "type": "object",
+      "properties": {
+        "emailVerificationEnabled": { "type": "boolean" },
+        "phoneVerificationEnabled": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Subscriber": {
+      "title": "Newsletter Subscriber",
+      "description": "A user who subscribed to the newsletter.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "subscribedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "subscribedAt"]
     }
   },
   "firestore": {
+    "/subscribers/{subscriberId}": {
+      "schema": "Subscriber",
+      "description": "Newsletter subscriptions."
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "Global application settings."
+    },
     "/users/{userId}": {
       "schema": "User",
       "description": "User profile documents."

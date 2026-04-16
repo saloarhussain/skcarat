@@ -20,9 +20,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'payments' | 'login'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'payments' | 'login' | 'customers'>('products');
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -35,11 +38,29 @@ export default function AdminDashboard() {
     if (isAdmin) {
       fetchProducts();
       fetchOrders();
+      fetchCustomers();
     }
   }, [isAdmin]);
 
-  const fetchOrders = async () => {
-    setOrdersLoading(true);
+  const fetchCustomers = async () => {
+    setCustomersLoading(true);
+    try {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUsers(usersData);
+
+      const subscribersSnapshot = await getDocs(collection(db, 'subscribers'));
+      const subscribersData = subscribersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setSubscribers(subscribersData);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast.error('Failed to load customer data');
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  const fetchOrders = async () => {    setOrdersLoading(true);
     try {
       const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
@@ -287,6 +308,13 @@ export default function AdminDashboard() {
                 className={cn(activeTab === 'orders' && "bg-brand-dark text-white")}
               >
                 Orders
+              </Button>
+              <Button 
+                variant={activeTab === 'customers' ? 'default' : 'ghost'} 
+                onClick={() => setActiveTab('customers')}
+                className={cn(activeTab === 'customers' && "bg-brand-dark text-white")}
+              >
+                Customers
               </Button>
               <Button 
                 variant={activeTab === 'payments' ? 'default' : 'ghost'} 
@@ -603,6 +631,92 @@ export default function AdminDashboard() {
             ))}
           </div>
         </>
+      ) : activeTab === 'customers' ? (
+        <div className="space-y-8">
+          <Card className="border-brand-dark/5 bg-white">
+            <CardHeader>
+              <CardTitle className="text-2xl font-serif">Registered Users</CardTitle>
+              <CardDescription>Users who have signed up for an account.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {customersLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-gold border-t-transparent" />
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-brand-dark/60">No users registered yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-brand-paper/50 text-brand-dark/60">
+                      <tr>
+                        <th className="px-6 py-3">Email</th>
+                        <th className="px-6 py-3">Role</th>
+                        <th className="px-6 py-3">Joined</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id} className="border-b border-brand-dark/5">
+                          <td className="px-6 py-4 font-medium">{u.email}</td>
+                          <td className="px-6 py-4">
+                            <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold uppercase", u.role === 'admin' ? "bg-brand-gold/10 text-brand-gold" : "bg-brand-dark/5 text-brand-dark/60")}>
+                              {u.role || 'user'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-brand-dark/60">
+                            {u.createdAt?.seconds ? new Date(u.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-brand-dark/5 bg-white">
+            <CardHeader>
+              <CardTitle className="text-2xl font-serif">Newsletter Subscribers</CardTitle>
+              <CardDescription>Users who have subscribed to the newsletter.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {customersLoading ? (
+                <div className="flex h-32 items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-gold border-t-transparent" />
+                </div>
+              ) : subscribers.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-brand-dark/60">No subscribers yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs uppercase bg-brand-paper/50 text-brand-dark/60">
+                      <tr>
+                        <th className="px-6 py-3">Email</th>
+                        <th className="px-6 py-3">Subscribed At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subscribers.map((s) => (
+                        <tr key={s.id} className="border-b border-brand-dark/5">
+                          <td className="px-6 py-4 font-medium">{s.email}</td>
+                          <td className="px-6 py-4 text-brand-dark/60">
+                            {s.subscribedAt?.seconds ? new Date(s.subscribedAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : activeTab === 'orders' ? (
         <div className="space-y-6">
           {ordersLoading ? (

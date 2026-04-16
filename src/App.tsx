@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import HomePage from '@/pages/HomePage';
 import ProductsPage from '@/pages/ProductsPage';
@@ -10,10 +11,36 @@ import ProfilePage from '@/pages/ProfilePage';
 import AdminDashboard from '@/pages/AdminDashboard';
 import CheckoutPage from '@/pages/CheckoutPage';
 import { Toaster } from '@/components/ui/sonner';
+import { toast } from 'sonner';
+import { db } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { FirebaseProvider } from '@/providers/FirebaseProvider';
 
 export default function App() {
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setIsSubscribing(true);
+    try {
+      await addDoc(collection(db, 'subscribers'), {
+        email,
+        subscribedAt: serverTimestamp()
+      });
+      toast.success('Successfully subscribed to newsletter!');
+      setEmail('');
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      toast.error('Failed to subscribe. Please try again.');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   return (
     <FirebaseProvider>
       <Router>
@@ -35,12 +62,29 @@ export default function App() {
           </main>
           <footer className="border-t border-brand-dark/10 bg-white py-12">
             <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32">
-              <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
+              <div className="grid grid-cols-1 gap-12 md:grid-cols-5">
                 <div className="col-span-1 md:col-span-2">
                   <span className="font-serif text-3xl font-bold tracking-tighter text-brand-dark">AURA</span>
                   <p className="mt-4 max-w-xs text-brand-dark/60">
                     Exquisite jewelry crafted for your most precious moments. Celebrate life with Aura.
                   </p>
+                  <form onSubmit={handleSubscribe} className="mt-6 flex max-w-xs gap-2">
+                    <input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="w-full rounded-md border border-brand-dark/20 px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isSubscribing}
+                      className="rounded-md bg-brand-dark px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark/90 disabled:opacity-50"
+                    >
+                      {isSubscribing ? '...' : 'Subscribe'}
+                    </button>
+                  </form>
                 </div>
                 <div>
                   <h4 className="mb-4 font-serif text-lg font-medium">Shop</h4>
