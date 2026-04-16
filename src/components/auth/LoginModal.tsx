@@ -19,7 +19,7 @@ import {
 } from "firebase/auth";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, MessageCircle, X, Mail, Lock, UserPlus, LogIn } from "lucide-react";
+import { ArrowRight, MessageCircle, X, Mail, Lock, UserPlus, LogIn, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LoginModalProps {
@@ -32,6 +32,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [settings, setSettings] = useState({
     emailEnabled: true,
     googleEnabled: true,
@@ -238,13 +239,24 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                       <Lock className="h-5 w-5 text-gray-400" />
                     </div>
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="flex-1 bg-transparent py-3 px-2 outline-none text-gray-900 placeholder:text-gray-400 text-sm"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                   {mode === 'login' && (
                     <div className="flex justify-end px-1">

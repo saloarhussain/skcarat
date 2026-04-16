@@ -31,7 +31,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           
-          const isDefaultAdmin = currentUser.email === 'business.saloarhussain@gmail.com';
+          const isDefaultAdmin = currentUser.email === 'business.saloarhussain@gmail.com' || currentUser.email === 'minecom2024@gmail.com';
           console.log("Is default admin?", isDefaultAdmin);
           
           if (!userDoc.exists()) {

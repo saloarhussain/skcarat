@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Home, ShoppingBag, Package, Users, Megaphone, Ticket, BarChart, Settings, Search, Bell, User, ChevronDown, Plus, Edit, Trash2, Save, X, Image as ImageIcon, Tag, Info, Truck, Gift, MessageCircle, Mail, Upload, Trash, ExternalLink, Menu, Download, CheckCircle2 } from 'lucide-react';
+import { Home, ShoppingBag, Package, Users, Megaphone, Ticket, BarChart, Settings, Search, Bell, User, ChevronDown, Plus, Edit, Trash2, Save, X, Image as ImageIcon, Tag, Info, Truck, Gift, MessageCircle, Mail, Upload, Trash, ExternalLink, Menu, Download, CheckCircle2, CreditCard, ShoppingCart, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export default function AdminDashboard() {
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  type Tab = 'home' | 'orders' | 'products' | 'customers' | 'marketing' | 'notifications' | 'discounts' | 'analytics' | 'settings';
+  type Tab = 'home' | 'orders' | 'products' | 'customers' | 'authentication' | 'notifications' | 'discounts' | 'analytics' | 'payment' | 'checkout' | 'settings';
   const [activeTab, setActiveTab] = useState<Tab>('home');
   
   const [orders, setOrders] = useState<any[]>([]);
@@ -588,10 +588,12 @@ export default function AdminDashboard() {
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'customers', label: 'Customers', icon: Users },
-    { id: 'marketing', label: 'Marketing', icon: Megaphone },
+    { id: 'authentication', label: 'Authentication', icon: Key },
     { id: 'notifications', label: 'Notifications', icon: Mail },
     { id: 'discounts', label: 'Discounts', icon: Ticket },
     { id: 'analytics', label: 'Analytics', icon: BarChart },
+    { id: 'payment', label: 'Payment', icon: CreditCard },
+    { id: 'checkout', label: 'Checkout', icon: ShoppingCart },
   ];
 
   if (authLoading || loading) {
@@ -1548,10 +1550,10 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
-            ) : activeTab === 'marketing' ? (
+            ) : activeTab === 'authentication' ? (
               <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold">Marketing</h1>
+                  <h1 className="text-2xl font-bold">Authentication</h1>
                 </div>
                 <Card className="border-none shadow-sm bg-white">
                   <CardHeader>
@@ -1685,7 +1687,7 @@ export default function AdminDashboard() {
                         onClick={() => saveAuthSettings(authSettings)}
                         className="bg-brand-gold text-white hover:bg-brand-gold/90"
                       >
-                        Update Marketing UI
+                        Update Login UI
                       </Button>
                     </div>
                   </CardContent>
@@ -1826,49 +1828,41 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              <Card className="border-brand-dark/5 bg-white h-fit">
+              <Card className="border-none shadow-sm bg-white h-fit">
                 <CardHeader>
-                  <CardTitle className="text-xl font-serif">SMTP Configuration</CardTitle>
-                  <CardDescription>Settings for your email delivery service.</CardDescription>
+                  <CardTitle className="text-xl font-serif">Custom SMTP Settings</CardTitle>
+                  <CardDescription>Store your SMTP details here for automated emails.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="p-4 rounded-xl bg-brand-gold/5 border border-brand-gold/10">
-                    <p className="text-xs text-brand-gold font-medium leading-relaxed">
-                      <strong>Note:</strong> SMTP credentials should be set as environment variables (SMTP_HOST, SMTP_USER, SMTP_PASS) for security. If not set, the system will log emails to the server console for debugging.
+                  <div className="rounded-lg bg-orange-50 p-4 border border-orange-100 mb-6">
+                    <p className="text-sm text-orange-800 leading-relaxed">
+                      <strong>Important Security Notice:</strong> Because Firebase handles user passwords with bank-level security, our custom code cannot send the Password Reset Email directly. Adding your Gmail credentials below will save them to your database for other notification emails, but to actually stop <strong>Firebase Password Reset</strong> emails from going to spam, <strong>you must manually paste these exact details into the Firebase Console</strong>:
+                      <br/><br/>
+                      1. Go to Firebase Console &gt; Authentication &gt; Templates<br/>
+                      2. Click "Password Reset"<br/>
+                      3. Click "SMTP Settings"<br/>
+                      4. Paste the username and App Password you configure below.
                     </p>
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">SMTP Host</label>
-                      <Input 
-                        value={smtpSettings.host} 
-                        onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
-                        placeholder="smtp.gmail.com" 
-                        className="bg-white" 
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">SMTP Host</label>
+                        <Input 
+                          value={smtpSettings.host} 
+                          onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
+                          placeholder="smtp.gmail.com" 
+                          className="bg-white" 
+                        />
+                      </div>
                       <div className="space-y-2">
                         <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">SMTP Port</label>
                         <Input 
                           value={smtpSettings.port} 
                           onChange={(e) => setSmtpSettings({ ...smtpSettings, port: e.target.value })}
-                          placeholder="587" 
+                          placeholder="465" 
                           className="bg-white" 
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">Encryption</label>
-                        <select 
-                          value={smtpSettings.encryption}
-                          onChange={(e) => setSmtpSettings({ ...smtpSettings, encryption: e.target.value })}
-                          className="w-full h-10 rounded-md border border-brand-dark/10 bg-white px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
-                        >
-                          <option>STARTTLS</option>
-                          <option>SSL/TLS</option>
-                          <option>None</option>
-                        </select>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -1876,12 +1870,12 @@ export default function AdminDashboard() {
                       <Input 
                         value={smtpSettings.username} 
                         onChange={(e) => setSmtpSettings({ ...smtpSettings, username: e.target.value })}
-                        placeholder="user@example.com" 
+                        placeholder="business.saloarhussain@gmail.com" 
                         className="bg-white" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">SMTP Password / App Password</label>
+                      <label className="text-xs font-bold uppercase tracking-wider text-brand-dark/60">App Password / SMTP Password</label>
                       <Input 
                         type="password"
                         value={smtpSettings.password} 
@@ -1895,9 +1889,10 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <Button onClick={saveSmtpSettings} variant="outline" className="w-full border-brand-dark/10 rounded-xl py-6">Update Credentials</Button>
+                  <Button onClick={saveSmtpSettings} className="w-full bg-brand-dark text-white rounded-xl py-6">Save SMTP Settings</Button>
                 </CardContent>
               </Card>
+
             </div>
           </div>
         ) : activeTab === 'discounts' ? (
@@ -1931,10 +1926,10 @@ export default function AdminDashboard() {
                   </Card>
                 </div>
               </div>
-            ) : activeTab === 'settings' ? (
+            ) : activeTab === 'payment' ? (
               <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold">Settings</h1>
+                  <h1 className="text-2xl font-bold">Payment Methods</h1>
                 </div>
                 <Card className="border-none shadow-sm bg-white">
                   <CardHeader>
@@ -2305,6 +2300,12 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+              </div>
+            ) : activeTab === 'checkout' ? (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold">Checkout Settings</h1>
+                </div>
 
                 {/* Checkout Verification Settings */}
                 <Card className="border-none shadow-sm bg-white">
@@ -2366,6 +2367,17 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            ) : activeTab === 'settings' ? (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold">Settings</h1>
+                </div>
+                <div className="bg-white p-12 rounded-xl border border-[#E3E3E3] text-center">
+                  <Settings className="h-12 w-12 mx-auto text-[#616161] mb-4" />
+                  <h3 className="text-lg font-bold">General Settings</h3>
+                  <p className="text-[#616161] max-w-md mx-auto mt-2">Manage your overall store preferences and configurations here.</p>
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-64">
