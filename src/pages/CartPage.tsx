@@ -3,29 +3,12 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MOCK_PRODUCTS } from '@/mockData';
-import { toast } from 'sonner';
+import { useCart } from '@/providers/CartProvider';
 import { cn } from '@/lib/utils';
 
 export default function CartPage() {
-  // Mock cart items
-  const [cartItems, setCartItems] = useState([
-    { ...MOCK_PRODUCTS[0], quantity: 1 },
-    { ...MOCK_PRODUCTS[2], quantity: 2 },
-  ]);
+  const { cartItems, removeFromCart, updateQuantity, subtotal } = useCart();
 
-  const updateQuantity = (id: string, delta: number) => {
-    setCartItems(prev => prev.map(item => 
-      item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-    ));
-  };
-
-  const removeItem = (id: string) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
-    toast.error('Item removed from cart');
-  };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 500 ? 0 : 50;
   const total = subtotal + shipping;
 
@@ -67,7 +50,7 @@ export default function CartPage() {
                       </Link>
                       <p className="text-sm text-brand-dark/60 capitalize">{item.category}</p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)} className="text-brand-dark/40 hover:text-red-500">
+                    <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)} className="text-brand-dark/40 hover:text-red-500">
                       <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>

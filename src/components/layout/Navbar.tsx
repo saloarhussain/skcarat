@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/providers/FirebaseProvider';
+import { useCart } from '@/providers/CartProvider';
 import { auth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ export default function Navbar() {
   const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
   const [selectedPincode, setSelectedPincode] = useState<string | null>(null);
   const { user, loading, isAdmin } = useAuth();
+  const { totalItems } = useCart();
 
   const handleSignOut = async () => {
     try {
@@ -141,9 +143,11 @@ export default function Navbar() {
               <Button variant="ghost" size="icon" className="relative hover:text-brand-gold transition-colors">
                 <div className="relative">
                   <ShoppingBag className="h-5 w-5" />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-paper">
-                    0
-                  </span>
+                  {totalItems > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-paper">
+                      {totalItems}
+                    </span>
+                  )}
                 </div>
               </Button>
             </Link>

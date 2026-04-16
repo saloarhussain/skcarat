@@ -20,6 +20,11 @@ export interface Product {
     name: string;
     image: string;
   }[];
+  offers?: {
+    title: string;
+    description: string;
+    code: string;
+  }[];
 }
 
 export interface Review {

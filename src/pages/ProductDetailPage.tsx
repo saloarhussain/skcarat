@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { MOCK_PRODUCTS } from '@/mockData';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
+import { useCart } from '@/providers/CartProvider';
 import { getPersonalizedRecommendations } from '@/services/geminiService';
 import ProductCard from '@/components/products/ProductCard';
 import { Product } from '@/types';
@@ -31,6 +32,8 @@ import { doc, getDoc } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToCart: addItemToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -40,6 +43,7 @@ export default function ProductDetailPage() {
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [openSection, setOpenSection] = useState<string | null>('about');
   const [isGift, setIsGift] = useState(false);
+  const [showAllOffers, setShowAllOffers] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -129,7 +133,21 @@ export default function ProductDetailPage() {
   };
 
   const addToCart = () => {
-    toast.success(`${product.name} added to cart!`);
+    if (product) {
+      addItemToCart(product);
+    }
+  };
+
+  const buyNow = () => {
+    if (product) {
+      addItemToCart(product);
+      navigate('/cart');
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`Code ${text} copied to clipboard!`);
   };
 
   const isGold = product.name.toLowerCase().includes('gold') || product.category === 'rings'; // Simplified logic
@@ -300,32 +318,78 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Offers Card */}
-              {(product.exclusiveOffers || (product.price > 2999)) && (
+              {((product.offers && product.offers.length > 0) || (product.price > 2999)) && (
                 <div className="mb-10 rounded-xl border border-brand-dark/5 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-                  <div className="mb-4 flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold/10">
-                      <Tag className="h-4 w-4 text-brand-gold" />
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-brand-dark">Exclusive Offers</span>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="group relative overflow-hidden rounded-lg border border-dashed border-brand-gold/30 bg-brand-gold/5 p-4 transition-colors hover:bg-brand-gold/10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-bold text-brand-dark">
-                            {product.exclusiveOffers || "FLAT 10% OFF"}
-                          </p>
-                          <p className="text-[10px] text-brand-dark/60">
-                            {product.exclusiveOffers ? "Limited time offer" : "On orders above ₹2,999"}
-                          </p>
-                        </div>
-                        {!product.exclusiveOffers && (
-                          <div className="rounded border border-brand-gold/20 bg-white px-2 py-1 text-[10px] font-bold text-brand-gold">
-                            AURA10
-                          </div>
-                        )}
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-gold/10">
+                        <Tag className="h-4 w-4 text-brand-gold" />
                       </div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-brand-dark">Offers For You</span>
                     </div>
+                    <span className="text-[10px] text-brand-dark/40 font-medium">(Can be applied at checkout)</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* Primary Offer */}
+                    {(product.offers && product.offers.length > 0) ? (
+                      <>
+                        {(showAllOffers ? product.offers : product.offers.slice(0, 1)).map((offer, idx) => (
+                          <div 
+                            key={idx} 
+                            className="group relative overflow-hidden rounded-lg border border-brand-dark/5 bg-[#F9F9F9] p-4 transition-all hover:border-brand-gold/30"
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
+                                  <Tag className="h-3.5 w-3.5 text-[#E91E63]" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-brand-dark uppercase tracking-tight">
+                                    {offer.title}
+                                  </p>
+                                  <p className="text-[10px] text-brand-dark/60">
+                                    {offer.description}
+                                  </p>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => copyToClipboard(offer.code)}
+                                className="flex flex-col items-center gap-1 rounded border border-brand-gold/20 bg-white px-3 py-1.5 transition-all hover:bg-brand-gold hover:text-white group-hover:border-brand-gold"
+                              >
+                                <span className="text-[10px] font-bold tracking-widest">{offer.code}</span>
+                                <span className="text-[7px] uppercase font-bold opacity-60">Tap to copy</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {product.offers.length > 1 && (
+                          <button 
+                            onClick={() => setShowAllOffers(!showAllOffers)}
+                            className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 hover:text-brand-gold transition-colors flex items-center justify-center gap-1"
+                          >
+                            {showAllOffers ? 'See Less' : `See ${product.offers.length - 1} More Offers`}
+                            <ChevronRight className={cn("h-3 w-3 transition-transform", showAllOffers ? "-rotate-90" : "rotate-90")} />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="group relative overflow-hidden rounded-lg border border-dashed border-brand-gold/30 bg-brand-gold/5 p-4 transition-colors hover:bg-brand-gold/10">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-brand-dark uppercase tracking-tight">FLAT 10% OFF</p>
+                            <p className="text-[10px] text-brand-dark/60">On orders above ₹2,999</p>
+                          </div>
+                          <button 
+                            onClick={() => copyToClipboard('AURA10')}
+                            className="rounded border border-brand-gold/20 bg-white px-3 py-1.5 text-[10px] font-bold text-brand-gold hover:bg-brand-gold hover:text-white transition-all"
+                          >
+                            AURA10
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -355,7 +419,7 @@ export default function ProductDetailPage() {
                   Add to Cart
                 </Button>
                 <Button 
-                  onClick={addToCart} 
+                  onClick={buyNow} 
                   className="h-14 flex-1 rounded-xl bg-brand-dark text-xs font-bold uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-[1.02] hover:bg-brand-dark/90 active:scale-[0.98]"
                 >
                   Buy Now

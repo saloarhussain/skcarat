@@ -9,10 +9,34 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Star, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { addDoc, serverTimestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setIsSubscribing(true);
+    try {
+      await addDoc(collection(db, 'subscribers'), {
+        email,
+        subscribedAt: serverTimestamp()
+      });
+      toast.success('Successfully subscribed to newsletter!');
+      setEmail('');
+    } catch (error) {
+      console.error('Error subscribing:', error);
+      toast.error('Failed to subscribe. Please try again.');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
@@ -130,15 +154,17 @@ export default function HomePage() {
           <p className="mx-auto mb-10 max-w-xl text-lg text-brand-dark/70">
             Subscribe to receive exclusive offers, early access to new collections, and style inspiration delivered to your inbox.
           </p>
-          <form className="mx-auto flex max-w-md flex-col items-center gap-4 sm:flex-row sm:items-stretch">
+          <form onSubmit={handleSubscribe} className="mx-auto flex max-w-md flex-col items-center gap-4 sm:flex-row sm:items-stretch">
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Your email address"
               className="w-full flex-1 rounded-full border border-brand-dark/10 bg-white px-6 py-3 focus:border-brand-gold focus:outline-none sm:w-auto"
               required
             />
-            <Button className="h-auto rounded-full bg-brand-dark px-8 py-3 text-white hover:bg-brand-dark/90">
-              Subscribe
+            <Button type="submit" disabled={isSubscribing} className="h-auto rounded-full bg-brand-dark px-8 py-3 text-white hover:bg-brand-dark/90 disabled:opacity-50">
+              {isSubscribing ? '...' : 'Subscribe'}
             </Button>
           </form>
         </div>
