@@ -178,6 +178,11 @@ export default function AdminDashboard() {
     enabled: true
   });
 
+  const [checkoutSettings, setCheckoutSettings] = useState({
+    emailVerificationEnabled: true,
+    phoneVerificationEnabled: true
+  });
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -208,6 +213,10 @@ export default function AdminDashboard() {
         // COD Settings
         const codDoc = await getDoc(doc(db, 'settings', 'cod_config'));
         if (codDoc.exists()) setCodSettings(codDoc.data() as any);
+
+        // Checkout Settings
+        const checkoutDoc = await getDoc(doc(db, 'settings', 'checkout'));
+        if (checkoutDoc.exists()) setCheckoutSettings(checkoutDoc.data() as any);
       } catch (error) {
         console.error('Error fetching settings:', error);
       }
@@ -281,6 +290,17 @@ export default function AdminDashboard() {
       toast.success(`Cash on Delivery ${enabled ? 'enabled' : 'disabled'}`);
     } catch (error) {
       toast.error('Failed to update COD settings');
+    }
+  };
+
+  const saveCheckoutSettings = async (key: string, value: boolean) => {
+    try {
+      const newSettings = { ...checkoutSettings, [key]: value };
+      await setDoc(doc(db, 'settings', 'checkout'), newSettings);
+      setCheckoutSettings(newSettings);
+      toast.success('Checkout settings updated');
+    } catch (error) {
+      toast.error('Failed to update checkout settings');
     }
   };
 
@@ -2283,6 +2303,67 @@ export default function AdminDashboard() {
                         </Card>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+
+                {/* Checkout Verification Settings */}
+                <Card className="border-none shadow-sm bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold">Checkout Verification</CardTitle>
+                    <CardDescription>Configure security and verification steps required during customer checkout.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-[#F9F9F9] border border-[#E3E3E3]">
+                      <div className="space-y-1">
+                        <h4 className="font-bold">Email Verification (OTP)</h4>
+                        <p className="text-sm text-[#616161]">Require customers to verify their email address before placing an order.</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">
+                          {checkoutSettings.emailVerificationEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <div 
+                          onClick={() => saveCheckoutSettings('emailVerificationEnabled', !checkoutSettings.emailVerificationEnabled)}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2",
+                            checkoutSettings.emailVerificationEnabled ? "bg-brand-gold" : "bg-gray-200"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              checkoutSettings.emailVerificationEnabled ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-[#F9F9F9] border border-[#E3E3E3]">
+                      <div className="space-y-1">
+                        <h4 className="font-bold">Phone Verification (OTP)</h4>
+                        <p className="text-sm text-[#616161]">Require customers to verify their phone number via SMS/OTP before placing an order.</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold uppercase tracking-widest text-brand-dark/40">
+                          {checkoutSettings.phoneVerificationEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        <div 
+                          onClick={() => saveCheckoutSettings('phoneVerificationEnabled', !checkoutSettings.phoneVerificationEnabled)}
+                          className={cn(
+                            "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-gold focus:ring-offset-2",
+                            checkoutSettings.phoneVerificationEnabled ? "bg-brand-gold" : "bg-gray-200"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              checkoutSettings.phoneVerificationEnabled ? "translate-x-5" : "translate-x-0"
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
