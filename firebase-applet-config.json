@@ -1,10 +1,8 @@
 {
-  "projectId": "gen-lang-client-0711769706",
-  "appId": "1:552508207876:web:7e28f52e5e72a05cda5651",
-  "apiKey": "AIzaSyAT5EEywMdZcfQxhfzSbzwBIfv_oqaEES0",
-  "authDomain": "gen-lang-client-0711769706.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-de3916a2-9fe3-4384-9dee-5f393c57ca0c",
-  "storageBucket": "gen-lang-client-0711769706.firebasestorage.app",
-  "messagingSenderId": "552508207876",
-  "measurementId": ""
+  "apiKey": "AIzaSyAYrFYOcrjwvxTKV5tL-vbKk4MPgzt2siM",
+  "authDomain": "skcarat-authentication.firebaseapp.com",
+  "projectId": "skcarat-authentication",
+  "storageBucket": "skcarat-authentication.firebasestorage.app",
+  "messagingSenderId": "745410431223",
+  "appId": "1:745410431223:web:d8d78643861b93e832ebf2"
 }

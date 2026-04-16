@@ -158,9 +158,27 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       toast.success('Signed in with Google');
       onClose();
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error('Failed to sign in with Google');
+      console.error("Google Auth Error:", error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        return;
       }
+      
+      let message = 'Failed to sign in with Google';
+      if (error.code === 'auth/unauthorized-domain') {
+        message = "This domain is not authorized. Please add this URL to 'Authorized domains' in Firebase Console.";
+      } else if (error.code === 'auth/popup-blocked') {
+        message = "Popup was blocked by your browser. Please allow popups for this site.";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        message = "Google sign-in is not enabled in Firebase. Please enable it in the Firebase Console.";
+      }
+      
+      toast.error(message, {
+        duration: 5000,
+        action: error.code === 'auth/unauthorized-domain' ? {
+          label: "How to fix?",
+          onClick: () => window.open('https://firebase.google.com/docs/auth/web/redirect-best-practices#add-domain', '_blank')
+        } : undefined
+      });
     }
   };
 
