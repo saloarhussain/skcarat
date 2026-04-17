@@ -10,6 +10,7 @@ import BlogPage from '@/pages/BlogPage';
 import ProfilePage from '@/pages/ProfilePage';
 import AdminDashboard from '@/pages/AdminDashboard';
 import CheckoutPage from '@/pages/CheckoutPage';
+import CustomPage from '@/pages/CustomPage';
 import { PrivacyPolicy, TermsOfService, RefundPolicy, CustomerSupport } from '@/pages/LegalPages';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
@@ -63,6 +64,7 @@ function AppContent() {
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/refund" element={<RefundPolicy />} />
           <Route path="/support" element={<CustomerSupport />} />
+          <Route path="/p/:slug" element={<CustomPage />} />
           {/* Add more routes here */}
         </Routes>
       </main>

@@ -1,9 +1,23 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { db } from '@/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function Hero() {
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'theme_config'), (snapshot) => {
+      if (snapshot.exists()) {
+        setConfig(snapshot.data());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <section className="relative h-[85vh] w-full overflow-hidden bg-brand-dark">
       {/* Background Image with Overlay */}
@@ -28,13 +42,16 @@ export default function Hero() {
               New Collection 2024
             </span>
             <h1 className="mb-6 font-serif text-6xl font-light leading-tight text-white md:text-8xl">
-              Elegance in <br />
-              <span className="italic text-brand-champagne">Every Detail</span>
+              {config?.heroTitle || 'Elegance in'} <br />
+              <span className="italic text-brand-champagne">{config?.heroSubtitle ? '' : 'Every Detail'}</span>
+              {config?.heroSubtitle && <div className="text-3xl md:text-4xl not-italic mt-4 text-brand-paper/80 font-sans">{config.heroSubtitle}</div>}
             </h1>
-            <p className="mb-10 text-lg text-brand-paper/80">
-              Discover our curated selection of fine jewelry, crafted with passion and precision to celebrate your most precious moments.
-            </p>
-            <div className="flex flex-wrap gap-4">
+            {!config?.heroSubtitle && (
+              <p className="mb-10 text-lg text-brand-paper/80">
+                Discover our curated selection of fine jewelry, crafted with passion and precision to celebrate your most precious moments.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-4 pt-4">
               <Link to="/products" className={cn(buttonVariants({ size: "lg" }), "bg-brand-gold text-white hover:bg-brand-gold/90 px-8 py-6 text-lg")}>
                 Shop Collection
               </Link>

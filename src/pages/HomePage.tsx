@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import Hero from '@/components/home/Hero';
+import ReelsSection from '@/components/home/ReelsSection';
 import ProductCard from '@/components/products/ProductCard';
 import { db } from '@/firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, limit, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Product } from '@/types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 export default function HomePage() {
@@ -39,32 +39,31 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      try {
-        const q = query(
-          collection(db, 'products'), 
-          where('isFeatured', '==', true),
-          limit(3)
-        );
-        const querySnapshot = await getDocs(q);
-        const productsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
-        setFeaturedProducts(productsData);
-      } catch (error) {
-        console.error('Error fetching featured products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const q = query(
+      collection(db, 'products'), 
+      where('isFeatured', '==', true),
+      limit(3)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const productsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Product[];
+      setFeaturedProducts(productsData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching featured products:', error);
+      setLoading(false);
+    });
 
-    fetchFeaturedProducts();
+    return () => unsubscribe();
   }, []);
 
   return (
     <div className="flex flex-col gap-20 pb-20">
       <Hero />
+      <ReelsSection />
 
       {/* Features Section */}
       <section className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32">

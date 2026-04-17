@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/providers/FirebaseProvider';
 import { auth, db } from '@/firebase';
 import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, query, collection, where, orderBy, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
 import LoginModal from '@/components/auth/LoginModal';
+import { Product } from '@/types';
 
 import { seedProducts } from '@/seed';
 
@@ -53,10 +54,63 @@ export default function ProfilePage() {
     }
   };
   const [profileData, setProfileData] = useState({
-    loyaltyPoints: 450,
-    tier: 'Gold',
+    loyaltyPoints: 0,
+    tier: 'Silver',
     nextTierPoints: 1000,
   });
+  const [userOrders, setUserOrders] = useState<any[]>([]);
+  const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Real-time listener for user profile data (loyalty points, tier)
+    const unsubscribeUser = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setProfileData({
+          loyaltyPoints: data.loyaltyPoints || 0,
+          tier: data.tier || 'Silver',
+          nextTierPoints: data.nextTierPoints || 1000,
+        });
+      }
+    });
+
+    // Real-time listener for user orders
+    const q = query(collection(db, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
+    const unsubscribeOrders = onSnapshot(q, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUserOrders(ordersData);
+    });
+
+    return () => {
+      unsubscribeUser();
+      unsubscribeOrders();
+    };
+  }, [user]);
+
+  // Wishlist fetching logic (similar to WishlistPage for consistency)
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribeWishlist = onSnapshot(doc(db, 'users', user.uid), async (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        const wishlistIds = userData.wishlist || [];
+        
+        if (wishlistIds.length > 0) {
+          const q = query(collection(db, 'products'), where('__name__', 'in', wishlistIds.slice(0, 10)));
+          const querySnapshot = await getDocs(q);
+          const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+          setWishlistItems(products);
+        } else {
+          setWishlistItems([]);
+        }
+      }
+    });
+
+    return () => unsubscribeWishlist();
+  }, [user]);
 
   const handleSeed = async () => {
     setIsSeeding(true);
@@ -69,13 +123,6 @@ export default function ProfilePage() {
       setIsSeeding(false);
     }
   };
-
-  useEffect(() => {
-    if (!loading && !user) {
-      // toast.error('Please sign in to view your profile');
-      // navigate('/');
-    }
-  }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -113,11 +160,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  const orders = [
-    { id: 'ORD-7721', date: '2024-02-15', total: 1299, status: 'Delivered', items: 1 },
-    { id: 'ORD-6542', date: '2023-11-20', total: 450, status: 'Delivered', items: 1 },
-  ];
 
   const sidebarItems = [
     { icon: User, label: 'Personal Info', value: 'personal' },
@@ -271,23 +313,30 @@ export default function ProfilePage() {
 
           {activeTab === 'orders' && (
             <div className="flex flex-col gap-4">
-              {orders.map((order) => (
-                <div key={order.id} className="flex flex-col gap-4 rounded-xl border border-brand-dark/10 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-bold text-brand-dark">{order.id}</span>
-                    <span className="text-xs text-brand-dark/60">{order.date} • {order.items} item(s)</span>
-                  </div>
-                  <div className="flex items-center gap-8">
-                    <div className="flex flex-col text-right">
-                      <span className="text-lg font-semibold">${order.total.toLocaleString()}</span>
-                      <span className="text-xs text-green-600">{order.status}</span>
+              {userOrders.length > 0 ? (
+                userOrders.map((order) => (
+                  <div key={order.id} className="flex flex-col gap-4 rounded-xl border border-brand-dark/10 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm font-bold text-brand-dark">{order.id}</span>
+                      <span className="text-xs text-brand-dark/60">{order.createdAt?.seconds ? new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 'Recent'} • {order.items?.length || 0} item(s)</span>
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
+                    <div className="flex items-center gap-8">
+                      <div className="flex flex-col text-right">
+                        <span className="text-lg font-semibold">₹{order.total?.toLocaleString()}</span>
+                        <span className={cn(
+                          "text-xs font-bold uppercase",
+                          order.status === 'delivered' ? "text-green-600" : "text-brand-gold"
+                        )}>{order.status}</span>
+                      </div>
+                      <Button variant="ghost" size="icon">
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="py-12 text-center text-brand-dark/40">No orders found yet.</div>
+              )}
             </div>
           )}
 
@@ -298,25 +347,29 @@ export default function ProfilePage() {
                 <CardDescription>Items you've saved for later.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  {MOCK_PRODUCTS.slice(0, 2).map((product) => (
-                    <div key={product.id} className="group relative flex flex-col gap-3">
-                      <div className="aspect-square overflow-hidden rounded-xl bg-brand-champagne/20">
-                        <img 
-                          src={product.images[0]} 
-                          alt={product.name} 
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          referrerPolicy="no-referrer"
-                        />
+                {wishlistItems.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {wishlistItems.map((product) => (
+                      <div key={product.id} className="group relative flex flex-col gap-3">
+                        <div className="aspect-square overflow-hidden rounded-xl bg-brand-champagne/20">
+                          <img 
+                            src={product.images[0]} 
+                            alt={product.name} 
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div>
+                          <h4 className="font-medium line-clamp-1">{product.name}</h4>
+                          <p className="text-sm text-brand-gold">₹{product.price.toLocaleString()}</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="w-full rounded-full">Add to Cart</Button>
                       </div>
-                      <div>
-                        <h4 className="font-medium">{product.name}</h4>
-                        <p className="text-sm text-brand-gold">${product.price.toLocaleString()}</p>
-                      </div>
-                      <Button variant="outline" size="sm" className="w-full rounded-full">Add to Cart</Button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-brand-dark/40">Your wishlist is empty.</div>
+                )}
                 <div className="mt-8 text-center">
                   <Link to="/products" className="text-sm font-medium text-brand-gold hover:underline">
                     Browse more products

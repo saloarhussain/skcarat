@@ -3,6 +3,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  compareAtPrice?: number;
   category: 'rings' | 'necklaces' | 'earrings' | 'bracelets';
   images: string[];
   rating: number;
@@ -25,6 +26,7 @@ export interface Product {
     description: string;
     code: string;
   }[];
+  features?: string[]; // Array of feature keys like '15_day_return', 'lifetime_plating'
 }
 
 export interface Review {
@@ -46,6 +48,25 @@ export interface BlogPost {
   author: string;
   date: string;
   tags: string[];
+}
+
+export interface Reel {
+  id: string;
+  videoUrl?: string;
+  embedCode?: string;
+  productId: string;
+  caption?: string;
+  thumbnail?: string;
+  createdAt: any;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
+  productIds: string[];
+  createdAt: any;
 }
 
 export interface UserProfile {

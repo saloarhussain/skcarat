@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingBag, Heart, User, Menu, X, MapPin, LogIn, ShieldCheck } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/providers/FirebaseProvider';
 import { useCart } from '@/providers/CartProvider';
-import { auth } from '@/firebase';
+import { auth, db } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import LoginModal from '@/components/auth/LoginModal';
 import PincodeModal from './PincodeModal';
@@ -22,6 +23,28 @@ export default function Navbar() {
   const [selectedPincode, setSelectedPincode] = useState<string | null>(null);
   const { user, loading, isAdmin } = useAuth();
   const { totalItems } = useCart();
+  const [themeConfig, setThemeConfig] = useState<any>(null);
+  const [announcementIndex, setAnnouncementIndex] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'theme_config'), (snapshot) => {
+      if (snapshot.exists()) {
+        setThemeConfig(snapshot.data());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const announcements = themeConfig?.announcements || (themeConfig?.announcementBar ? [themeConfig.announcementBar] : []);
+
+  useEffect(() => {
+    if (themeConfig?.showAnnouncementBar && announcements.length > 1) {
+      const interval = setInterval(() => {
+        setAnnouncementIndex(prev => (prev + 1) % announcements.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [themeConfig, announcements.length]);
 
   const handleSignOut = async () => {
     try {
@@ -44,9 +67,22 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Top Banner */}
-      <div className="bg-brand-champagne/30 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-brand-dark">
-        0% Making Charges on Gold Jewellery!
-      </div>
+      {themeConfig?.showAnnouncementBar && announcements.length > 0 && (
+        <div className="bg-brand-champagne/30 py-1.5 overflow-hidden h-8 relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={announcementIndex}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="absolute inset-0 flex items-center justify-center text-[10px] font-bold uppercase tracking-widest text-brand-dark px-4 text-center"
+            >
+              {announcements[announcementIndex]}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
 
       <nav className="w-full border-b border-brand-dark/10 bg-brand-paper/95 backdrop-blur-md">
         <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32">

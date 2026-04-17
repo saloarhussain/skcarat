@@ -25,7 +25,7 @@ export default function CheckoutPage() {
   const { user } = useAuth();
   const { cartItems, subtotal, clearCart } = useCart();
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'stripe' | 'wise'>('online');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cod' | 'stripe' | 'wise'>('cod');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState<'email' | 'phone' | null>(null);
   const [otp, setOtp] = useState('');
@@ -38,9 +38,9 @@ export default function CheckoutPage() {
   });
   const [wiseConfig, setWiseConfig] = useState<any>(null);
   const [paymentConfigs, setPaymentConfigs] = useState({
-    razorpay: { enabled: true },
-    stripe: { enabled: true },
-    wise: { enabled: true, accountNumber: '' },
+    razorpay: { enabled: false },
+    stripe: { enabled: false },
+    wise: { enabled: false, accountNumber: '' },
     cod: { enabled: true }
   });
   const [formData, setFormData] = useState({
@@ -75,9 +75,9 @@ export default function CheckoutPage() {
         ]);
 
         const configs = {
-          razorpay: razorDoc.exists() ? razorDoc.data() : { enabled: true },
-          stripe: stripeDoc.exists() ? stripeDoc.data() : { enabled: true },
-          wise: wiseDoc.exists() ? wiseDoc.data() : { enabled: true, accountNumber: '' },
+          razorpay: razorDoc.exists() ? razorDoc.data() : { enabled: false },
+          stripe: stripeDoc.exists() ? stripeDoc.data() : { enabled: false },
+          wise: wiseDoc.exists() ? wiseDoc.data() : { enabled: false, accountNumber: '' },
           cod: codDoc.exists() ? codDoc.data() : { enabled: true }
         };
 

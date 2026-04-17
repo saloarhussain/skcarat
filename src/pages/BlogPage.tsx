@@ -1,11 +1,43 @@
-import { MOCK_BLOG_POSTS } from '@/mockData';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, User, Tag } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { db } from '@/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { BlogPost } from '@/types';
 
 export default function BlogPage() {
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'blog'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().date || new Date().toISOString()
+      })) as BlogPost[];
+      setBlogPosts(postsData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching blog posts:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-gold border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32 py-12">
       <div className="mb-16 text-center">
@@ -18,7 +50,7 @@ export default function BlogPage() {
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
         {/* Main Blog List */}
         <div className="lg:col-span-2 flex flex-col gap-12">
-          {MOCK_BLOG_POSTS.map((post) => (
+          {blogPosts.length > 0 ? blogPosts.map((post) => (
             <motion.article
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
@@ -53,7 +85,7 @@ export default function BlogPage() {
                 </p>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-2">
-                    {post.tags.map(tag => (
+                    {(post.tags || []).map(tag => (
                       <span key={tag} className="rounded-full bg-brand-paper px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60">
                         {tag}
                       </span>
@@ -65,9 +97,14 @@ export default function BlogPage() {
                 </div>
               </div>
             </motion.article>
-          ))}
+          )) : (
+            <div className="py-20 text-center">
+              <h3 className="text-2xl font-light">No blog posts found</h3>
+              <p className="text-brand-dark/60">Check back later for fresh inspiration.</p>
+            </div>
+          )}
         </div>
-
+...
         {/* Sidebar */}
         <aside className="flex flex-col gap-8">
           <div className="rounded-2xl bg-white p-8 shadow-sm">

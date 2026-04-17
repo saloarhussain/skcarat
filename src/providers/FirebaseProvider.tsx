@@ -27,18 +27,18 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setUser(currentUser);
         
         if (currentUser) {
+          const isDefaultAdmin = currentUser.email?.toLowerCase() === 'business.saloarhussain@gmail.com' || currentUser.email?.toLowerCase() === 'minecom2024@gmail.com';
+          setIsAdmin(isDefaultAdmin); // Immediate fallback for better UX and race prevention
+          
           console.log("Checking Firestore for user doc:", currentUser.uid);
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userDoc = await getDoc(userDocRef);
-          
-          const isDefaultAdmin = currentUser.email === 'business.saloarhussain@gmail.com' || currentUser.email === 'minecom2024@gmail.com';
-          console.log("Is default admin?", isDefaultAdmin);
           
           if (!userDoc.exists()) {
             console.log("User doc does not exist. Creating...");
             const userData: any = {
               uid: currentUser.uid,
-              email: currentUser.email,
+              email: currentUser.email?.toLowerCase(),
               role: isDefaultAdmin ? 'admin' : 'user',
               createdAt: serverTimestamp()
             };

@@ -2,14 +2,61 @@ import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Product } from '@/types';
+import { useCart } from '@/providers/CartProvider';
+import { useAuth } from '@/providers/FirebaseProvider';
+import { db } from '@/firebase';
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { addToCart } = useCart();
+  const { user } = useAuth();
+  const [isInWishlist, setIsInWishlist] = useState(false);
+
+  useEffect(() => {
+    if (user && (user as any).wishlist) {
+      setIsInWishlist((user as any).wishlist.includes(product.id));
+    }
+  }, [user, product.id]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error('Please sign in to add to wishlist');
+      return;
+    }
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      if (isInWishlist) {
+        await updateDoc(userRef, {
+          wishlist: arrayRemove(product.id)
+        });
+        toast.success('Removed from wishlist');
+      } else {
+        await updateDoc(userRef, {
+          wishlist: arrayUnion(product.id)
+        });
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist');
+    }
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    addToCart(product);
+    toast.success('Added to cart');
+  };
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -35,13 +82,13 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Top Right Wishlist */}
         <button 
-          className="absolute right-2.5 top-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-brand-dark/30 shadow-sm backdrop-blur-sm transition-all hover:scale-110 hover:text-[#E98B8B] hover:shadow-md"
-          onClick={(e) => {
-            e.preventDefault();
-            // Wishlist logic
-          }}
+          className={cn(
+            "absolute right-2.5 top-2.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-all hover:scale-110 shadow-md",
+            isInWishlist ? "text-[#E98B8B]" : "text-brand-dark/30 hover:text-[#E98B8B]"
+          )}
+          onClick={toggleWishlist}
         >
-          <Heart className="h-5 w-5" />
+          <Heart className={cn("h-5 w-5", isInWishlist && "fill-current")} />
         </button>
 
         {/* Rating Overlay (Bottom Left of Image) */}
@@ -83,10 +130,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="border-t border-brand-dark/5 p-3">
         <Button 
           className="h-11 w-full rounded-lg bg-[#FCE4EC] text-[11px] font-bold uppercase tracking-widest text-brand-dark transition-all hover:bg-[#F8BBD0] active:scale-[0.98]"
-          onClick={(e) => {
-            e.preventDefault();
-            // Add to cart logic
-          }}
+          onClick={handleAddToCart}
         >
           Add to Cart
         </Button>

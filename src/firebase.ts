@@ -52,6 +52,8 @@ export interface FirestoreErrorInfo {
   }
 }
 
+import { toast } from 'sonner';
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -72,5 +74,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  
+  // Display user-friendly message
+  const message = error instanceof Error ? error.message : 'An unknown database error occurred';
+  toast.error(`Database Error: ${message}`);
+  
   throw new Error(JSON.stringify(errInfo));
 }

@@ -1,6 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { MOCK_PRODUCTS } from '@/mockData';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -28,7 +27,7 @@ import ProductCard from '@/components/products/ProductCard';
 import { Product } from '@/types';
 import { cn } from '@/lib/utils';
 import { db } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, query, collection, where, limit, getDocs } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -46,54 +45,45 @@ export default function ProductDetailPage() {
   const [showAllOffers, setShowAllOffers] = useState(false);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!id) return;
-      setLoading(true);
-      
-      try {
-        // Try Firestore first
-        const docRef = doc(db, 'products', id);
-        const docSnap = await getDoc(docRef);
+    if (!id) return;
+    setLoading(true);
+
+    const unsubscribe = onSnapshot(doc(db, 'products', id), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = { id: snapshot.id, ...snapshot.data() } as Product;
+        setProduct(data);
         
-        if (docSnap.exists()) {
-          const data = { id: docSnap.id, ...docSnap.data() } as Product;
-          setProduct(data);
-          if (data.variants && data.variants.length > 0) {
-            setSelectedFinish(data.variants[0].name);
-          }
-        } else {
-          // Fallback to mock data if not in Firestore
-          const mockProduct = MOCK_PRODUCTS.find(p => p.id === id);
-          if (mockProduct) {
-            setProduct(mockProduct);
-            if (mockProduct.variants && mockProduct.variants.length > 0) {
-              setSelectedFinish(mockProduct.variants[0].name);
-            }
-          }
+        const validVariants = data.variants?.filter(v => !!v.image) || [];
+        if (validVariants.length > 0 && !selectedFinish) {
+          setSelectedFinish(validVariants[0].name);
         }
-      } catch (error) {
-        console.error('Error fetching product:', error);
-        // Final fallback to mock data on error
-        const mockProduct = MOCK_PRODUCTS.find(p => p.id === id);
-        if (mockProduct) {
-          setProduct(mockProduct);
-        }
-      } finally {
-        setLoading(false);
+      } else {
+        setProduct(null);
       }
-    };
-    fetchProduct();
-  }, [id]);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching product:', error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [id, selectedFinish]);
 
   useEffect(() => {
     if (product) {
       const fetchRecommendations = async () => {
         try {
-          // For recommendations, we'll still use mock data for now to avoid complex queries,
-          // but we should ideally fetch from Firestore.
-          // To keep it simple and fast, we'll use MOCK_PRODUCTS as a pool for recommendations.
-          const recIds = await getPersonalizedRecommendations([product], MOCK_PRODUCTS.filter(p => p.id !== product.id));
-          const recs = MOCK_PRODUCTS.filter(p => recIds.includes(p.id));
+          const q = query(
+            collection(db, 'products'), 
+            where('category', '==', product.category),
+            limit(5)
+          );
+          const snapshot = await getDocs(q);
+          const recs = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Product))
+            .filter(p => p.id !== product.id)
+            .slice(0, 4);
+          
           setRecommendations(recs);
         } catch (error) {
           console.error('Error fetching recommendations:', error);
@@ -205,10 +195,26 @@ export default function ProductDetailPage() {
                     <span className="text-xl text-brand-dark/40 line-through">₹{(product.price * 1.5).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-dark/40 shadow-sm transition-colors hover:text-[#E98B8B]">
+                    <button 
+                      onClick={() => toast.info('Added to Wishlist!')}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-dark/40 shadow-sm transition-colors hover:text-[#E98B8B]"
+                    >
                       <Heart className="h-6 w-6" />
                     </button>
-                    <button className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-dark/40 shadow-sm transition-colors hover:text-brand-gold">
+                    <button 
+                      onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: product.name,
+                            url: window.location.href,
+                          }).catch(console.error);
+                        } else {
+                          navigator.clipboard.writeText(window.location.href);
+                          toast.success('Link copied to clipboard!');
+                        }
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-brand-dark/40 shadow-sm transition-colors hover:text-brand-gold"
+                    >
                       <Share2 className="h-6 w-6" />
                     </button>
                   </div>
@@ -222,23 +228,31 @@ export default function ProductDetailPage() {
                     {product.label}
                   </Badge>
                 )}
-                <h1 className="mb-2 text-xl font-medium text-brand-dark/80">{product.name}</h1>
-                <p className="text-lg font-bold text-brand-dark">Made With Pure {isGold ? '18K Gold' : '925 Silver'}</p>
+                <h1 className="mb-2 text-xl font-medium font-epilogue text-brand-dark/80">{product.name}</h1>
               </div>
 
-              <div className="mb-10">
-                <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 px-4 py-2">
-                  <span className="text-xs font-bold uppercase tracking-widest text-blue-600">Price Drop!</span>
-                  <div className="h-1 w-1 rounded-full bg-blue-600/30" />
+              {product.compareAtPrice && product.compareAtPrice > product.price ? (
+                <div className="mb-10">
+                  <div className="inline-flex items-center gap-3 rounded-lg bg-green-50/80 px-4 py-2.5 border border-green-200 shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-600">
+                      <Tag className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold uppercase tracking-widest text-green-700">Price Drop</span>
+                      <span className="text-[13px] font-medium text-green-600">
+                        You save ₹{(product.compareAtPrice - product.price).toLocaleString()} ({Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)}% off)
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
               {/* Choose Your Finish */}
-              {product.variants && product.variants.length > 0 && (
+              {product.variants && product.variants.filter(v => !!v.image).length > 0 && (
                 <div className="mb-10">
                   <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-brand-dark">Choose Your Finish</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    {product.variants.map((finish) => (
+                    {product.variants.filter(v => !!v.image).map((finish) => (
                       <button 
                         key={finish.name} 
                         onClick={() => setSelectedFinish(finish.name)}
@@ -289,36 +303,51 @@ export default function ProductDetailPage() {
                 )}
 
                 {/* Trust Icons Grid */}
-                <div className="mt-8 grid grid-cols-2 gap-y-6 border-t border-brand-dark/5 pt-8">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gold/5">
-                      <RefreshCw className="h-5 w-5 text-brand-gold" />
+                {(() => {
+                  const features = product.features || ['15_day_return', 'lifetime_plating', '6_month_warranty', 'fine_material'];
+                  if (features.length === 0) return null;
+                  
+                  return (
+                    <div className="mt-8 grid grid-cols-2 gap-6 border-t border-brand-dark/10 pt-8">
+                      {features.includes('15_day_return') && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
+                            <RefreshCw className="h-7 w-7 text-brand-gold" />
+                          </div>
+                          <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">Easy 15 day return</span>
+                        </div>
+                      )}
+                      {features.includes('lifetime_plating') && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
+                            <ShieldCheck className="h-7 w-7 text-brand-gold" />
+                          </div>
+                          <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">Lifetime plating</span>
+                        </div>
+                      )}
+                      {features.includes('6_month_warranty') && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
+                            <Truck className="h-7 w-7 text-brand-gold" />
+                          </div>
+                          <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">6-Month warranty</span>
+                        </div>
+                      )}
+                      {features.includes('fine_material') && (
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
+                            <CheckCircle2 className="h-7 w-7 text-brand-gold" />
+                          </div>
+                          <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">{isGold ? '18k gold quality' : 'Fine 925 silver'}</span>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-tight text-brand-dark/60 leading-tight">Easy 15 Day<br/>Return</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gold/5">
-                      <ShieldCheck className="h-5 w-5 text-brand-gold" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-tight text-brand-dark/60 leading-tight">Lifetime<br/>Plating</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gold/5">
-                      <Truck className="h-5 w-5 text-brand-gold" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-tight text-brand-dark/60 leading-tight">6-Month<br/>Warranty</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gold/5">
-                      <CheckCircle2 className="h-5 w-5 text-brand-gold" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-tight text-brand-dark/60 leading-tight">Fine 925<br/>Silver</span>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               {/* Offers Card */}
-              {((product.offers && product.offers.length > 0) || (product.price > 2999)) && (
+              {(product.offers && product.offers.length > 0) && (
                 <div className="mb-10 rounded-xl border border-brand-dark/5 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -332,63 +361,44 @@ export default function ProductDetailPage() {
                   
                   <div className="space-y-3">
                     {/* Primary Offer */}
-                    {(product.offers && product.offers.length > 0) ? (
-                      <>
-                        {(showAllOffers ? product.offers : product.offers.slice(0, 1)).map((offer, idx) => (
-                          <div 
-                            key={idx} 
-                            className="group relative overflow-hidden rounded-lg border border-brand-dark/5 bg-[#F9F9F9] p-4 transition-all hover:border-brand-gold/30"
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
-                                  <Tag className="h-3.5 w-3.5 text-[#E91E63]" />
-                                </div>
-                                <div>
-                                  <p className="text-xs font-bold text-brand-dark uppercase tracking-tight">
-                                    {offer.title}
-                                  </p>
-                                  <p className="text-[10px] text-brand-dark/60">
-                                    {offer.description}
-                                  </p>
-                                </div>
-                              </div>
-                              <button 
-                                onClick={() => copyToClipboard(offer.code)}
-                                className="flex flex-col items-center gap-1 rounded border border-brand-gold/20 bg-white px-3 py-1.5 transition-all hover:bg-brand-gold hover:text-white group-hover:border-brand-gold"
-                              >
-                                <span className="text-[10px] font-bold tracking-widest">{offer.code}</span>
-                                <span className="text-[7px] uppercase font-bold opacity-60">Tap to copy</span>
-                              </button>
+                    {(showAllOffers ? product.offers : product.offers.slice(0, 1)).map((offer, idx) => (
+                      <div 
+                        key={idx} 
+                        className="group relative overflow-hidden rounded-lg border border-brand-dark/5 bg-[#F9F9F9] p-4 transition-all hover:border-brand-gold/30"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm">
+                              <Tag className="h-3.5 w-3.5 text-[#E91E63]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-brand-dark uppercase tracking-tight">
+                                {offer.title}
+                              </p>
+                              <p className="text-[10px] text-brand-dark/60">
+                                {offer.description}
+                              </p>
                             </div>
                           </div>
-                        ))}
-                        
-                        {product.offers.length > 1 && (
                           <button 
-                            onClick={() => setShowAllOffers(!showAllOffers)}
-                            className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 hover:text-brand-gold transition-colors flex items-center justify-center gap-1"
+                            onClick={() => copyToClipboard(offer.code)}
+                            className="flex flex-col items-center gap-1 rounded border border-brand-gold/20 bg-white px-3 py-1.5 transition-all hover:bg-brand-gold hover:text-white group-hover:border-brand-gold"
                           >
-                            {showAllOffers ? 'See Less' : `See ${product.offers.length - 1} More Offers`}
-                            <ChevronRight className={cn("h-3 w-3 transition-transform", showAllOffers ? "-rotate-90" : "rotate-90")} />
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="group relative overflow-hidden rounded-lg border border-dashed border-brand-gold/30 bg-brand-gold/5 p-4 transition-colors hover:bg-brand-gold/10">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-bold text-brand-dark uppercase tracking-tight">FLAT 10% OFF</p>
-                            <p className="text-[10px] text-brand-dark/60">On orders above ₹2,999</p>
-                          </div>
-                          <button 
-                            onClick={() => copyToClipboard('AURA10')}
-                            className="rounded border border-brand-gold/20 bg-white px-3 py-1.5 text-[10px] font-bold text-brand-gold hover:bg-brand-gold hover:text-white transition-all"
-                          >
-                            AURA10
+                            <span className="text-[10px] font-bold tracking-widest">{offer.code}</span>
+                            <span className="text-[7px] uppercase font-bold opacity-60">Tap to copy</span>
                           </button>
                         </div>
                       </div>
+                    ))}
+                    
+                    {product.offers.length > 1 && (
+                      <button 
+                        onClick={() => setShowAllOffers(!showAllOffers)}
+                        className="w-full py-2 text-[10px] font-bold uppercase tracking-widest text-brand-dark/60 hover:text-brand-gold transition-colors flex items-center justify-center gap-1"
+                      >
+                        {showAllOffers ? 'See Less' : `See ${product.offers.length - 1} More Offers`}
+                        <ChevronRight className={cn("h-3 w-3 transition-transform", showAllOffers ? "-rotate-90" : "rotate-90")} />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -427,28 +437,36 @@ export default function ProductDetailPage() {
               </div>
 
               {/* Accordion Sections Card */}
-              <div className="mb-12 overflow-hidden rounded-xl border border-brand-dark/5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-                {[
+              {(() => {
+                const sections = [
                   { id: 'about', title: 'About the Product', content: product.about || product.description },
-                  { id: 'details', title: 'Product Details', content: product.details || (isGold ? '18K Gold, 2.5g Weight, BIS Hallmarked' : '925 Sterling Silver, Rhodium Finish, AAA+ Zircons') },
-                  { id: 'shipping', title: 'Shipping & Returns', content: product.shippingReturns || 'Free express shipping. 30-day hassle-free returns.' },
-                ].map((section, index) => (
-                  <div key={section.id} className={cn(index !== 0 && "border-t border-brand-dark/5")}>
-                    <button 
-                      onClick={() => setOpenSection(openSection === section.id ? null : section.id)}
-                      className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-brand-dark/[0.02]"
-                    >
-                      <span className="text-[11px] font-bold uppercase tracking-widest text-brand-dark">{section.title}</span>
-                      <ChevronRight className={`h-4 w-4 text-brand-dark/40 transition-transform ${openSection === section.id ? 'rotate-90' : ''}`} />
-                    </button>
-                    {openSection === section.id && (
-                      <div className="px-5 pb-5 text-xs leading-relaxed text-brand-dark/60">
-                        {section.content}
+                  { id: 'details', title: 'Product Details', content: product.details },
+                  { id: 'shipping', title: 'Shipping & Returns', content: product.shippingReturns },
+                ].filter(s => !!s.content && s.content.trim() !== '');
+
+                if (sections.length === 0) return null;
+
+                return (
+                  <div className="mb-12 overflow-hidden rounded-xl border border-brand-dark/5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                    {sections.map((section, index) => (
+                      <div key={section.id} className={cn(index !== 0 && "border-t border-brand-dark/5")}>
+                        <button 
+                          onClick={() => setOpenSection(openSection === section.id ? null : section.id)}
+                          className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-brand-dark/[0.02]"
+                        >
+                          <span className="text-[11px] font-bold uppercase tracking-widest text-brand-dark">{section.title}</span>
+                          <ChevronRight className={`h-4 w-4 text-brand-dark/40 transition-transform ${openSection === section.id ? 'rotate-90' : ''}`} />
+                        </button>
+                        {openSection === section.id && (
+                          <div className="px-5 pb-5 text-xs leading-relaxed text-brand-dark/60 whitespace-pre-wrap">
+                            {section.content}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           </div>
         </div>

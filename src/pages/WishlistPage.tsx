@@ -1,18 +1,74 @@
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Trash2 } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { MOCK_PRODUCTS } from '@/mockData';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/providers/FirebaseProvider';
+import { db } from '@/firebase';
+import { doc, onSnapshot, collection, query, where, getDocs, updateDoc, arrayRemove } from 'firebase/firestore';
+import { Product } from '@/types';
+import { useCart } from '@/providers/CartProvider';
 
 export default function WishlistPage() {
-  const [wishlistItems, setWishlistItems] = useState(MOCK_PRODUCTS.slice(1, 3));
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+  const [wishlistItems, setWishlistItems] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const removeFromWishlist = (id: string) => {
-    setWishlistItems(prev => prev.filter(item => item.id !== id));
-    toast.error('Removed from wishlist');
+  useEffect(() => {
+    if (!user) {
+      setWishlistItems([]);
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), async (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        const wishlistIds = userData.wishlist || [];
+        
+        if (wishlistIds.length > 0) {
+          // Fetch products in wishlist
+          const q = query(collection(db, 'products'), where('__name__', 'in', wishlistIds.slice(0, 10)));
+          const querySnapshot = await getDocs(q);
+          const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+          setWishlistItems(products);
+        } else {
+          setWishlistItems([]);
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const removeFromWishlist = async (id: string) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        wishlist: arrayRemove(id)
+      });
+      toast.error('Removed from wishlist');
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      toast.error('Failed to remove from wishlist');
+    }
   };
+
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+    toast.success('Added to cart');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-gold border-t-transparent" />
+      </div>
+    );
+  }
 
   if (wishlistItems.length === 0) {
     return (
@@ -37,9 +93,11 @@ export default function WishlistPage() {
 
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {wishlistItems.map((product) => (
-          <div key={product.id} className="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-sm">
-            <div className="relative aspect-square overflow-hidden">
-              <img src={product.images[0]} alt={product.name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+          <div key={product.id} className="group relative flex flex-col overflow-hidden rounded-xl bg-white shadow-sm border border-brand-dark/5">
+            <div className="relative aspect-square overflow-hidden bg-[#F9F9F9]">
+              <Link to={`/products/${product.id}`}>
+                <img src={product.images[0]} alt={product.name} className="h-full w-full object-contain mix-blend-multiply transition-transform duration-500 hover:scale-105" referrerPolicy="no-referrer" />
+              </Link>
               <Button
                 variant="secondary"
                 size="icon"
@@ -49,14 +107,19 @@ export default function WishlistPage() {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <div className="p-4">
-              <h3 className="mb-2 font-serif text-lg font-medium">{product.name}</h3>
-              <p className="mb-4 text-xl font-semibold">${product.price.toLocaleString()}</p>
-              <div className="flex gap-2">
-                <Button className="flex-1 bg-brand-dark text-white hover:bg-brand-dark/90">
+            <div className="p-4 flex flex-col flex-1">
+              <Link to={`/products/${product.id}`}>
+                <h3 className="mb-2 font-medium line-clamp-1">{product.name}</h3>
+              </Link>
+              <p className="mb-4 text-xl font-bold">₹{product.price.toLocaleString()}</p>
+              <div className="flex gap-2 mt-auto">
+                <Button 
+                  onClick={() => handleAddToCart(product)}
+                  className="flex-1 bg-brand-dark text-white hover:bg-brand-dark/90 text-xs font-bold uppercase tracking-widest"
+                >
                   <ShoppingBag className="mr-2 h-4 w-4" /> Add to Cart
                 </Button>
-                <Link to={`/products/${product.id}`} className={cn(buttonVariants({ variant: "outline", size: "icon" }))}>
+                <Link to={`/products/${product.id}`} className={cn(buttonVariants({ variant: "outline", size: "icon" }), "rounded-lg")}>
                   <span className="sr-only">View</span>
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

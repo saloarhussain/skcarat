@@ -73,9 +73,102 @@
         "subscribedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "subscribedAt"]
+    },
+    "Reel": {
+      "title": "Instagram Reel",
+      "description": "A short video linked to a product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "videoUrl": { "type": "string", "format": "uri" },
+        "embedCode": { "type": "string" },
+        "productId": { "type": "string" },
+        "caption": { "type": "string" },
+        "thumbnail": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId"]
+    },
+    "Collection": {
+      "title": "Product Collection",
+      "description": "A group of products.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "productIds": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "productIds"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "description": "Article for the store blog.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "author": { "type": "string" },
+        "date": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title", "content", "author"]
+    },
+    "Page": {
+      "title": "Static Page",
+      "description": "Static content page like About Us or FAQ.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "content": { "type": "string" },
+        "isVisible": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "slug", "content"]
+    },
+    "ThemeConfig": {
+      "title": "Store Theme Configuration",
+      "description": "Global styles and configuration for the store frontend.",
+      "type": "object",
+      "properties": {
+        "primaryColor": { "type": "string" },
+        "secondaryColor": { "type": "string" },
+        "announcements": { "type": "array", "items": { "type": "string" } },
+        "showAnnouncementBar": { "type": "boolean" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "fontFamily": { "type": "string" }
+      }
     }
   },
   "firestore": {
+    "/collections/{collectionId}": {
+      "schema": "Collection",
+      "description": "Custom product collections."
+    },
+    "/blog/{postId}": {
+      "schema": "BlogPost",
+      "description": "Store blog articles."
+    },
+    "/pages/{pageId}": {
+      "schema": "Page",
+      "description": "Static store pages."
+    },
+    "/settings/theme_config": {
+      "schema": "ThemeConfig",
+      "description": "Global store appearance settings."
+    },
+    "/reels/{reelId}": {
+      "schema": "Reel",
+      "description": "Video reels for products."
+    },
     "/subscribers/{subscriberId}": {
       "schema": "Subscriber",
       "description": "Newsletter subscriptions."
