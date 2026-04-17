@@ -68,7 +68,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 w-full">
       {/* Top Banner */}
       {themeConfig?.showAnnouncementBar && announcements.length > 0 && (
-        <div className="bg-brand-champagne/30 py-1.5 overflow-hidden h-8 relative">
+        <div className="bg-brand-champagne py-1.5 overflow-hidden h-8 relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={announcementIndex}

@@ -4,11 +4,12 @@ import { toast } from 'sonner';
 
 interface CartItem extends Product {
   quantity: number;
+  isGiftWrap?: boolean;
 }
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, isGiftWrap?: boolean) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, delta: number) => void;
   clearCart: () => void;
@@ -28,17 +29,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('aura_cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, isGiftWrap: boolean = false) => {
     setCartItems(prev => {
       const existingItem = prev.find(item => item.id === product.id);
       if (existingItem) {
         toast.success(`Updated ${product.name} quantity in cart`);
         return prev.map(item => 
-          item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item
+          item.id === product.id ? { ...item, quantity: item.quantity + quantity, isGiftWrap } : item
         );
       }
       toast.success(`${product.name} added to cart`);
-      return [...prev, { ...product, quantity }];
+      return [...prev, { ...product, quantity, isGiftWrap }];
     });
   };
 
@@ -57,7 +58,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartItems([]);
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity) + (item.isGiftWrap ? 50 * item.quantity : 0), 0);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (

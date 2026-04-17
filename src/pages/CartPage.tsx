@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity, subtotal } = useCart();
+  const giftWrapFee = cartItems.reduce((sum, item) => sum + (item.isGiftWrap ? 50 * item.quantity : 0), 0);
 
   const shipping = subtotal > 500 ? 0 : 50;
-  const total = subtotal + shipping;
+  const total = subtotal + shipping + giftWrapFee;
 
   if (cartItems.length === 0) {
     return (
@@ -87,6 +88,12 @@ export default function CartPage() {
                 <span>Shipping</span>
                 <span>{shipping === 0 ? 'FREE' : `$${shipping}`}</span>
               </div>
+              {giftWrapFee > 0 && (
+                <div className="flex justify-between text-brand-dark/60">
+                  <span>Gift Wrap</span>
+                  <span>${giftWrapFee.toLocaleString()}</span>
+                </div>
+              )}
               <Separator className="my-2 bg-brand-dark/10" />
               <div className="flex justify-between text-xl font-semibold">
                 <span>Total</span>

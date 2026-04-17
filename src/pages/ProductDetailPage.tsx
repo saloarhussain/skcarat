@@ -124,13 +124,13 @@ export default function ProductDetailPage() {
 
   const addToCart = () => {
     if (product) {
-      addItemToCart(product);
+      addItemToCart(product, 1, isGift);
     }
   };
 
   const buyNow = () => {
     if (product) {
-      addItemToCart(product);
+      addItemToCart(product, 1, isGift);
       navigate('/cart');
     }
   };
@@ -311,32 +311,32 @@ export default function ProductDetailPage() {
                     <div className="mt-8 grid grid-cols-2 gap-6 border-t border-brand-dark/10 pt-8">
                       {features.includes('15_day_return') && (
                         <div className="flex items-center gap-4">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
-                            <RefreshCw className="h-7 w-7 text-brand-gold" />
+                          <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-gold/10">
+                            <RefreshCw className="h-5 w-5 sm:h-7 sm:w-7 text-brand-gold" />
                           </div>
                           <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">Easy 15 day return</span>
                         </div>
                       )}
                       {features.includes('lifetime_plating') && (
                         <div className="flex items-center gap-4">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
-                            <ShieldCheck className="h-7 w-7 text-brand-gold" />
+                          <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-gold/10">
+                            <ShieldCheck className="h-5 w-5 sm:h-7 sm:w-7 text-brand-gold" />
                           </div>
                           <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">Lifetime plating</span>
                         </div>
                       )}
                       {features.includes('6_month_warranty') && (
                         <div className="flex items-center gap-4">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
-                            <Truck className="h-7 w-7 text-brand-gold" />
+                          <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-gold/10">
+                            <Truck className="h-5 w-5 sm:h-7 sm:w-7 text-brand-gold" />
                           </div>
                           <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">6-Month warranty</span>
                         </div>
                       )}
                       {features.includes('fine_material') && (
                         <div className="flex items-center gap-4">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-gold/10">
-                            <CheckCircle2 className="h-7 w-7 text-brand-gold" />
+                          <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-gold/10">
+                            <CheckCircle2 className="h-5 w-5 sm:h-7 sm:w-7 text-brand-gold" />
                           </div>
                           <span className="text-xs font-bold tracking-tight text-brand-dark/80 whitespace-nowrap">{isGold ? '18k gold quality' : 'Fine 925 silver'}</span>
                         </div>
