@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '@/firebase';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { Play, Volume2, VolumeX } from 'lucide-react';
 export default function ReelsSection() {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsubscribeReels = onSnapshot(
@@ -44,6 +45,38 @@ export default function ReelsSection() {
     }
   }, [reels]);
 
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only intercept if primarily scrolling vertically
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        // Find if we are at horizontal limits
+        const atStart = container.scrollLeft <= 0;
+        const atEnd = Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth;
+
+        // If we are at the beginning and scrolling up, let it scroll page vertically
+        if (atStart && e.deltaY < 0) return;
+        // If we are at the end and scrolling down, let it scroll page vertically
+        if (atEnd && e.deltaY > 0) return;
+
+        e.preventDefault();
+        container.scrollBy({
+          left: e.deltaY * 2,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Need passive: false to allow e.preventDefault()
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [reels]);
+
   if (loading || reels.length === 0) return null;
 
   return (
@@ -55,9 +88,14 @@ export default function ReelsSection() {
         <h2 className="text-3xl font-light md:text-5xl">Instagram Reels</h2>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start justify-center">
+      <div 
+        ref={scrollRef}
+        className="flex overflow-x-auto gap-4 items-start snap-x snap-mandatory pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] cursor-grab active:cursor-grabbing"
+      >
         {reels.map((reel) => (
-          <ReelCard key={reel.id} reel={reel} />
+          <div key={reel.id} className="flex-none w-[200px] md:w-[240px] lg:w-[280px] snap-center">
+            <ReelCard reel={reel} />
+          </div>
         ))}
       </div>
     </section>
