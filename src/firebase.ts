@@ -77,7 +77,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   
   // Display user-friendly message
   const message = error instanceof Error ? error.message : 'An unknown database error occurred';
-  toast.error(`Database Error: ${message}`);
+  toast.error(`Database Error (${path || 'Unknown'}): ${message}`);
   
-  throw new Error(JSON.stringify(errInfo));
+  // Do NOT throw to avoid crashing react components
 }

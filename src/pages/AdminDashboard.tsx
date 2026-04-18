@@ -90,6 +90,7 @@ export default function AdminDashboard() {
   const [reelForm, setReelForm] = useState({
     videoUrl: '',
     embedCode: '',
+    productSku: '',
     productId: '',
     caption: '',
     thumbnail: ''
@@ -97,6 +98,13 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [subscribersLoading, setSubscribersLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [reelProductSearch, setReelProductSearch] = useState('');
+  const [reelListSearchQuery, setReelListSearchQuery] = useState('');
+
+  const filteredReelProducts = products.filter(p => 
+    p.name.toLowerCase().includes(reelProductSearch.toLowerCase()) || 
+    (p.sku && p.sku.toLowerCase().includes(reelProductSearch.toLowerCase()))
+  );
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -546,20 +554,27 @@ export default function AdminDashboard() {
         setIsSavingReel(false);
         return;
       }
-      console.log('Saving reel...', reelForm);
+
+      const reelData = {
+        videoUrl: reelForm.videoUrl,
+        embedCode: reelForm.embedCode,
+        productId: reelForm.productId,
+        caption: reelForm.caption,
+        thumbnail: reelForm.thumbnail,
+        createdAt: editingReel ? editingReel.createdAt : serverTimestamp()
+      };
+      
+      console.log('Saving reel...', reelData);
       if (editingReel) {
-        await updateDoc(doc(db, 'reels', editingReel.id), reelForm);
+        await updateDoc(doc(db, 'reels', editingReel.id), reelData);
         toast.success('Reel updated successfully');
       } else {
-        await addDoc(collection(db, 'reels'), {
-          ...reelForm,
-          createdAt: serverTimestamp()
-        });
+        await addDoc(collection(db, 'reels'), reelData);
         toast.success('Reel added successfully');
       }
       setIsAddingReel(false);
       setEditingReel(null);
-      setReelForm({ videoUrl: '', embedCode: '', productId: '', caption: '', thumbnail: '' });
+      setReelForm({ videoUrl: '', embedCode: '', productSku: '', productId: '', caption: '', thumbnail: '' });
     } catch (error) {
       handleFirestoreError(error, editingReel ? OperationType.UPDATE : OperationType.CREATE, 'reels');
     } finally {
@@ -582,6 +597,7 @@ export default function AdminDashboard() {
     setReelForm({
       videoUrl: reel.videoUrl || '',
       embedCode: reel.embedCode || '',
+      productSku: products.find(p => p.id === reel.productId)?.sku || '',
       productId: reel.productId,
       caption: reel.caption || '',
       thumbnail: reel.thumbnail || ''
@@ -592,7 +608,7 @@ export default function AdminDashboard() {
 
   const startAddingReel = () => {
     setEditingReel(null);
-    setReelForm({ videoUrl: '', embedCode: '', productId: '', caption: '', thumbnail: '' });
+    setReelForm({ videoUrl: '', embedCode: '', productSku: '', productId: '', caption: '', thumbnail: '' });
     setIsAddingReel(true);
   };
 
@@ -1202,30 +1218,29 @@ export default function AdminDashboard() {
               <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border-2 border-[#1A1A1A]" />
             </button>
             <DropdownMenu>
-              <DropdownMenuTrigger className="focus:outline-none flex items-center gap-2 pl-3 border-l border-white/10 cursor-pointer hover:bg-white/5 py-1 px-2 rounded-md transition-colors bg-transparent border-none appearance-none group">
+              <DropdownMenuTrigger className="flex items-center gap-2 pl-3 border-l border-white/10 cursor-pointer hover:bg-white/5 py-1 px-2 rounded-md transition-colors bg-transparent border-none outline-none group">
                 <div className="h-7 w-7 bg-brand-gold rounded-full flex items-center justify-center text-[10px] font-bold text-white group-hover:bg-brand-gold/90 transition-colors">
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-sm font-medium hidden md:block text-white/90 group-hover:text-white transition-colors">{user?.displayName || 'Admin'}</span>
                 <ChevronDown className="h-4 w-4 text-white/40 group-hover:text-white/60 transition-colors" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 mt-2 hidden sm:block">
-                <DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56 mt-2 bg-[#1A1A1A] border-white/10 text-white">
+                <div className="px-1.5 py-1.5 text-xs font-medium border-b border-white/10 mb-1">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.displayName || 'Admin'}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium leading-none text-white">{user?.displayName || 'Admin'}</p>
+                    <p className="text-xs leading-none text-white/60">{user?.email}</p>
                   </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer">
+                </div>
+                <DropdownMenuItem onClick={() => navigate('/')} className="cursor-pointer hover:bg-white/10 focus:bg-white/10 text-white/90 focus:text-white">
                   <Globe className="mr-2 h-4 w-4" />
                   <span>Back to Website</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setActiveTab('settings')} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => setActiveTab('settings')} className="cursor-pointer hover:bg-white/10 focus:bg-white/10 text-white/90 focus:text-white">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Dashboard Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem 
                   onClick={async () => {
                     try {
@@ -1235,7 +1250,7 @@ export default function AdminDashboard() {
                       toast.error('Error signing out');
                     }
                   }} 
-                  className="text-red-500 hover:text-red-600 focus:text-red-600 cursor-pointer"
+                  className="text-red-400 hover:text-red-300 focus:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 cursor-pointer"
                 >
                   <span className="w-full">Sign out</span>
                 </DropdownMenuItem>
@@ -1404,6 +1419,15 @@ export default function AdminDashboard() {
                               onChange={e => setEditingProduct({...editingProduct, name: e.target.value})}
                               required
                               placeholder="e.g. Eternal Rose Gold Ring"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm font-bold uppercase tracking-widest text-brand-dark/60">SKU</label>
+                            <Input 
+                              value={editingProduct.sku || ''} 
+                              onChange={e => setEditingProduct({...editingProduct, sku: e.target.value})}
+                              placeholder="e.g. RINGS-001"
                             />
                           </div>
                           
@@ -1762,7 +1786,15 @@ export default function AdminDashboard() {
                           <div className="mb-4 flex items-start justify-between">
                             <div>
                               <h3 className="font-bold text-sm">{product.name}</h3>
-                              <p className="text-xs text-[#616161] capitalize">{product.category}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs text-[#616161] capitalize">{product.category}</p>
+                                {product.sku && (
+                                  <>
+                                    <span className="text-[#616161] text-[10px]">•</span>
+                                    <p className="text-[10px] font-mono text-brand-gold uppercase">{product.sku}</p>
+                                  </>
+                                )}
+                              </div>
                             </div>
                             <span className="text-sm font-bold">₹{product.price.toLocaleString()}</span>
                           </div>
@@ -1939,9 +1971,20 @@ export default function AdminDashboard() {
                     <p className="text-sm text-[#616161]">Manage short videos and link them to products for shop-able reels.</p>
                   </div>
                   {!isAddingReel && (
-                    <Button onClick={startAddingReel} className="bg-brand-dark text-white hover:bg-brand-dark/90">
-                      <Plus className="mr-2 h-4 w-4" /> Add Reel
-                    </Button>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-dark/40" />
+                        <Input 
+                          placeholder="Search product ID or SKU..." 
+                          value={reelListSearchQuery}
+                          onChange={e => setReelListSearchQuery(e.target.value)}
+                          className="pl-9 w-64 border-brand-dark/20 focus:border-brand-gold focus:ring-brand-gold"
+                        />
+                      </div>
+                      <Button onClick={startAddingReel} className="bg-brand-dark text-white hover:bg-brand-dark/90">
+                        <Plus className="mr-2 h-4 w-4" /> Add Reel
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -1976,17 +2019,27 @@ export default function AdminDashboard() {
                            </div>
                           <div className="space-y-2">
                             <label className="text-sm font-bold uppercase tracking-widest text-brand-dark/60">Linked Product</label>
-                            <select 
-                              className="w-full rounded-md border border-brand-dark/10 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                              value={reelForm.productId}
-                              onChange={e => setReelForm({...reelForm, productId: e.target.value})}
-                              required
-                            >
-                              <option value="">Select a Product</option>
-                              {products.map(p => (
-                                <option key={p.id} value={p.id}>{p.name} (₹{p.price})</option>
-                              ))}
-                            </select>
+                            <div className="space-y-2">
+                              <Input 
+                                placeholder="Search by name or SKU..." 
+                                value={reelProductSearch}
+                                onChange={e => setReelProductSearch(e.target.value)}
+                                className="h-9 text-xs mb-2"
+                              />
+                              <select 
+                                className="w-full rounded-md border border-brand-dark/10 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                                value={reelForm.productId}
+                                onChange={e => setReelForm({...reelForm, productId: e.target.value})}
+                                required
+                              >
+                                <option value="">Select a Product ({filteredReelProducts.length} results)</option>
+                                {filteredReelProducts.map(p => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} {p.sku ? `(SKU: ${p.sku})` : ''} — ₹{p.price}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                           <div className="space-y-2">
                             <label className="text-sm font-bold uppercase tracking-widest text-brand-dark/60">Thumbnail URL (Optional)</label>
@@ -2029,39 +2082,134 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {reels.map((reel) => {
-                      const product = products.find(p => p.id === reel.productId);
-                      return (
-                        <Card key={reel.id} className="overflow-hidden border-none bg-white transition-all hover:shadow-md shadow-sm">
-                          <div className="aspect-[9/16] relative bg-black group">
-                            {reel.thumbnail ? (
-                              <img src={reel.thumbnail} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Film size={48} className="text-white/20" />
+                  <div className="space-y-6">
+                    {/* Reels Stats & Header */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-brand-dark/5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#616161]/60">Total Reels</p>
+                        <p className="text-2xl font-serif font-bold text-brand-dark">{reels.length}</p>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-brand-dark/5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#616161]/60">Linked to Products</p>
+                        <p className="text-2xl font-serif font-bold text-brand-gold">{reels.filter(r => r.productId).length}</p>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl shadow-sm border border-brand-dark/5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#616161]/60">Unlinked</p>
+                        <p className="text-2xl font-serif font-bold text-red-500">{reels.filter(r => !r.productId).length}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                      {reels.filter(reel => {
+                        if (!reelListSearchQuery) return true;
+                        const product = products.find(p => p.id === reel.productId);
+                        const searchLower = reelListSearchQuery.toLowerCase();
+                        return (
+                          (product?.sku && product.sku.toLowerCase().includes(searchLower)) ||
+                          (product?.id && product.id.toLowerCase().includes(searchLower)) ||
+                          (product?.name && product.name.toLowerCase().includes(searchLower))
+                        );
+                      }).map((reel) => {
+                        const product = products.find(p => p.id === reel.productId);
+                        return (
+                          <Card key={reel.id} className="group overflow-hidden border-none bg-white transition-all hover:shadow-lg shadow-sm flex flex-col">
+                            <div 
+                              className="aspect-[4/5] relative bg-black overflow-hidden"
+                              onMouseEnter={(e) => {
+                                const video = e.currentTarget.querySelector('video');
+                                if (video) {
+                                  video.play().catch(() => {});
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                const video = e.currentTarget.querySelector('video');
+                                if (video) {
+                                  video.pause();
+                                  video.currentTime = 0;
+                                }
+                              }}
+                            >
+                              {reel.videoUrl ? (
+                                <video 
+                                  src={reel.videoUrl} 
+                                  poster={reel.thumbnail || undefined}
+                                  muted 
+                                  loop 
+                                  playsInline
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                />
+                              ) : reel.thumbnail ? (
+                                <img src={reel.thumbnail} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-dark/80 to-brand-dark">
+                                  <Film size={32} className="text-white/20" />
+                                </div>
+                              )}
+                              
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-10">
+                                {product && product.images[0] && (
+                                  <div className="h-16 w-16 rounded-lg overflow-hidden border-2 border-white/50 mb-2 shadow-lg">
+                                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover bg-white" />
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <Button size="icon" className="h-8 w-8 rounded-full bg-white text-brand-dark hover:bg-brand-gold hover:text-white transition-colors" onClick={() => startEditingReel(reel)}>
+                                    <Edit size={14} />
+                                  </Button>
+                                  <Button size="icon" className="h-8 w-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors" onClick={() => handleDeleteReel(reel.id)}>
+                                    <Trash2 size={14} />
+                                  </Button>
+                                </div>
                               </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                              <Button size="icon" className="h-10 w-10 rounded-full bg-white text-brand-dark" onClick={() => startEditingReel(reel)}>
-                                <Edit size={18} />
-                              </Button>
-                              <Button size="icon" className="h-10 w-10 rounded-full bg-red-500 text-white" onClick={() => handleDeleteReel(reel.id)}>
-                                <Trash2 size={18} />
-                              </Button>
+
+                              {product && (
+                                <div className="absolute top-2 left-2 px-2 py-0.5 bg-brand-gold text-white text-[8px] font-bold uppercase rounded-full shadow-sm z-20">
+                                  Linked
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          <CardContent className="p-4">
-                            <div className="space-y-1">
-                              <h3 className="font-bold text-sm truncate">{reel.caption || 'No Caption'}</h3>
-                              <p className="text-xs text-[#616161] truncate">Product: {product?.name || 'Unknown'}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
+                            <CardContent className="p-3 flex-grow bg-white flex flex-col justify-between">
+                              <div className="space-y-1 mb-2">
+                                <h3 className="font-bold text-xs truncate text-brand-dark" title={reel.caption || 'No Caption'}>
+                                  {reel.caption || (
+                                    <span className="text-[#616161]/40 italic font-normal">No Caption</span>
+                                  )}
+                                </h3>
+                                {product ? (
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] text-[#616161] truncate leading-tight">{product.name}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-red-500 font-medium">No Product Linked</p>
+                                )}
+                              </div>
+                              {/* Bold SKU Section at Bottom */}
+                              {product ? (
+                                <div className="mt-auto pt-2 border-t border-brand-dark/5">
+                                  <p className="text-[11px] font-bold uppercase tracking-wider text-brand-dark">
+                                    {product.sku || 'SKU: N/A'}
+                                  </p>
+                                </div>
+                              ) : null}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                      
+                      {/* Add New Quick Card */}
+                      <button 
+                        onClick={startAddingReel}
+                        className="aspect-[4/5] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E3E3E3] hover:border-brand-gold hover:bg-brand-gold/5 transition-all text-[#616161] group"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-[#F5F5F5] flex items-center justify-center mb-2 group-hover:bg-brand-gold group-hover:text-white transition-colors">
+                          <Plus size={20} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Add New</span>
+                      </button>
+                    </div>
+
                     {reels.length === 0 && (
-                      <div className="col-span-full py-20 text-center bg-[#F9F9F9] rounded-2xl border-2 border-dashed border-[#E3E3E3]">
+                      <div className="py-20 text-center bg-[#F9F9F9] rounded-2xl border-2 border-dashed border-[#E3E3E3]">
                         <Film size={48} className="mx-auto text-[#616161]/20 mb-4" />
                         <p className="text-[#616161]">No reels added yet. Start by adding your first shop-able reel!</p>
                       </div>

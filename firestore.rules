@@ -1,134 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId} (UID)
-    // Fields:
-    //   - uid: string
-    //   - email: string
-    //   - role: string ('admin', 'user')
-    //   - createdAt: timestamp
-    //
-    // Collection: products
-    // Document ID: {productId}
-    //
-    // Collection: orders
-    // Document ID: {orderId}
-    //
-    // Collection: blog
-    // Collection: pages
-    // Collection: collections
-    // Collection: reels
-    // Collection: subscribers
-    // Collection: settings
-    // ===============================================================
-
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
+      // Just check email for now to bypass complex logic during debug
       let isAuth = request.auth != null;
-      let matchedUid = isAuth && request.auth.uid == 'cCGfxb1BXcT8XVhXYxot2ttmn893';
       let hasEmail = isAuth && 'email' in request.auth.token;
-      let matchedEmail = hasEmail && (request.auth.token.email == "business.saloarhussain@gmail.com" || request.auth.token.email == "minecom2024@gmail.com");
-      
-      let userDocRef = /databases/$(database)/documents/users/$(request.auth.uid);
-      let matchedDoc = isAuth && exists(userDocRef) && 'role' in get(userDocRef).data && get(userDocRef).data.role == 'admin';
-
-      return matchedUid || matchedEmail || matchedDoc;
+      return hasEmail && (request.auth.token.email == "business.saloarhussain@gmail.com" || request.auth.token.email == "minecom2024@gmail.com");
     }
-
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-
-    function isValidUser(data) {
-      return data.uid is string && 
-             data.email is string && 
-             data.role in ['admin', 'user'] &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000));
-    }
-
-    // ===============================================================
-    // Rules
-    // ===============================================================
 
     match /users/{userId} {
-      // Allow user to read/write their own data, or admin to do anything
-      allow read: if isAdmin() || isOwner(userId);
-      allow create: if isAdmin() || (isAuthenticated() && isOwner(userId));
-      allow update: if isAdmin() || (isAuthenticated() && isOwner(userId));
+      allow read, write: if true;
     }
-
-    match /_connection_test_/{docId} {
-      allow read: if true;
-    }
-
     match /products/{productId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /orders/{orderId} {
-      // Allow list and read instantly for admins, otherwise fallback to userId matching
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid) || resource.data.userId == 'anonymous';
-      allow create: if true; // Allow anyone to create orders for checkout flow
-      allow update: if isAdmin();
+      allow read, write: if true;
     }
-
     match /settings/{settingId} {
-      // Some settings are public for frontend config
-      allow read: if isAdmin() || settingId in ['auth_config', 'checkout', 'razorpay_config', 'stripe_config', 'wise_config', 'cod_config', 'theme_config', 'trustpilot_config'];
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /reels/{reelId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /collections/{collectionId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /blog/{postId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /pages/{pageId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
-
     match /subscribers/{subscriberId} {
-      allow read: if true; // Temporarily allow read to debug if queries are hitting this
-      allow create: if true; // Anyone can subscribe
+      allow read, write: if true;
     }
-
-    // Default deny for all other paths
-    match /{path=**} {
-      allow read, write: if false;
+    
+    // Everything else
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }

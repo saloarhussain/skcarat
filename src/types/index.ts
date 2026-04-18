@@ -4,6 +4,7 @@ export interface Product {
   description: string;
   price: number;
   compareAtPrice?: number;
+  sku?: string;
   category: 'rings' | 'necklaces' | 'earrings' | 'bracelets';
   images: string[];
   rating: number;
