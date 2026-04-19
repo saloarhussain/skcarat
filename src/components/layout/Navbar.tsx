@@ -84,14 +84,14 @@ export default function Navbar() {
         </div>
       )}
 
-      <nav className="w-full border-b border-brand-dark/10 bg-brand-paper/95 backdrop-blur-md">
+      <nav className="w-full border-b border-brand-dark/10 bg-brand-nav-bg/95 text-brand-nav-text backdrop-blur-md">
         <div className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-32">
           {/* Top Row: Logo, Search, Actions */}
           <div className="flex h-16 md:h-20 items-center justify-between gap-4 md:gap-8">
             {/* Mobile Menu Trigger */}
             <div className="flex md:hidden">
               <Sheet>
-                <SheetTrigger render={<Button variant="ghost" size="icon" />}>
+                <SheetTrigger render={<Button variant="ghost" size="icon" className="text-brand-nav-text" />}>
                   <Menu className="h-6 w-6" />
                 </SheetTrigger>
                 <SheetContent side="left" className="bg-brand-paper">
@@ -136,19 +136,19 @@ export default function Navbar() {
             {/* Logo & Delivery */}
             <div className="flex items-center gap-4 shrink-0">
               <Link to="/" className="flex items-center gap-2">
-                <span className="font-serif text-2xl md:text-3xl font-bold tracking-tighter text-brand-dark">
+                <span className="font-serif text-2xl md:text-3xl font-bold tracking-tighter text-brand-nav-text">
                   AURA
                 </span>
               </Link>
 
               <button 
                 onClick={() => setIsPincodeModalOpen(true)}
-                className="hidden lg:flex items-center gap-2 rounded-md border border-brand-dark/10 px-3 py-1.5 text-left transition-colors hover:bg-white"
+                className="hidden lg:flex items-center gap-2 rounded-md border border-brand-dark/10 px-3 py-1.5 text-left transition-colors hover:bg-white/10"
               >
                 <MapPin className="h-4 w-4 text-brand-gold" />
                 <div className="flex flex-col leading-none">
-                  <span className="text-[9px] font-bold uppercase tracking-tighter text-brand-dark/40">Deliver to</span>
-                  <span className="text-[11px] font-bold text-brand-dark">
+                  <span className="text-[9px] font-bold uppercase tracking-tighter text-brand-nav-text/40">Deliver to</span>
+                  <span className="text-[11px] font-bold text-brand-nav-text">
                     {selectedPincode || 'Enter Pincode'}
                   </span>
                 </div>
@@ -156,7 +156,7 @@ export default function Navbar() {
             </div>
 
             {/* Search Bar (Desktop) */}
-            <div className="hidden md:flex relative flex-1 max-w-xl">
+            <div className="hidden md:flex relative flex-1 max-w-xl text-brand-dark">
               <Input
                 type="text"
                 placeholder='Search "Necklaces", "Rings" or "Earrings"'
@@ -168,19 +168,19 @@ export default function Navbar() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-1 md:gap-2 shrink-0">
+            <div className="flex items-center gap-1 md:gap-2 shrink-0 text-brand-nav-text">
             <Link to="/wishlist">
-              <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors text-brand-nav-text">
                 <Heart className="h-5 w-5" />
               </Button>
             </Link>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" className="relative hover:text-brand-gold transition-colors text-brand-nav-text">
                 <div className="relative">
                   <ShoppingBag className="h-5 w-5" />
                   {totalItems > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-paper">
+                    <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-gold text-[10px] font-bold text-white border-2 border-brand-nav-bg">
                       {totalItems}
                     </span>
                   )}
@@ -198,12 +198,12 @@ export default function Navbar() {
 
             {loading ? (
               <div className="flex items-center justify-center w-10 h-10">
-                <div className="h-5 w-5 animate-pulse rounded-full bg-brand-dark/10" />
+                <div className="h-5 w-5 animate-pulse rounded-full bg-brand-nav-text/10" />
               </div>
             ) : user ? (
               <Link to="/profile">
-                <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors">
-                  <div className="h-6 w-6 overflow-hidden rounded-full border border-brand-dark/10">
+                <Button variant="ghost" size="icon" className="hover:text-brand-gold transition-colors text-brand-nav-text">
+                  <div className="h-6 w-6 overflow-hidden rounded-full border border-brand-nav-text/10">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt={user.displayName || 'User'} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
@@ -213,7 +213,7 @@ export default function Navbar() {
                 </Button>
               </Link>
             ) : (
-              <Button variant="ghost" size="icon" onClick={() => setIsLoginModalOpen(true)} className="hover:text-brand-gold transition-colors">
+              <Button variant="ghost" size="icon" onClick={() => setIsLoginModalOpen(true)} className="hover:text-brand-gold transition-colors text-brand-nav-text">
                 <User className="h-5 w-5" />
               </Button>
             )}
@@ -228,7 +228,7 @@ export default function Navbar() {
         />
 
         {/* Mobile Search Row */}
-        <div className="md:hidden px-4 pb-4">
+        <div className="md:hidden px-4 pb-4 text-brand-dark">
           <div className="relative w-full">
             <Input
               type="text"
@@ -247,7 +247,7 @@ export default function Navbar() {
             <Link
               key={link.name}
               to={link.href}
-              className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-dark/70 hover:text-brand-gold transition-colors"
+              className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-nav-text/70 hover:text-brand-gold transition-colors"
             >
               {link.name}
             </Link>

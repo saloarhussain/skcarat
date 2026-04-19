@@ -8,6 +8,7 @@ import { Play, Volume2, VolumeX } from 'lucide-react';
 export default function ReelsSection() {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,47 @@ export default function ReelsSection() {
     }
   }, [reels]);
 
+  // Handle continuous slow-motion auto-scroll
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || reels.length === 0) return;
+
+    let animationFrameId: number;
+    let remainder = 0;
+    const speed = 0.2; // Pixels per frame
+    let direction = 1; // 1 for right, -1 for left
+
+    const scroll = () => {
+      if (!isPaused) {
+        remainder += speed;
+        if (remainder >= 1) {
+          const pixelsToMove = Math.floor(remainder);
+          remainder -= pixelsToMove;
+          
+          if (direction === 1) {
+            container.scrollLeft += pixelsToMove;
+            // Reverse when we reach the end
+            if (Math.ceil(container.scrollLeft + container.clientWidth) >= container.scrollWidth) {
+              direction = -1;
+            }
+          } else {
+            container.scrollLeft -= pixelsToMove;
+            // Reverse when we reach the start
+            if (container.scrollLeft <= 0) {
+              direction = 1;
+            }
+          }
+        }
+      }
+      animationFrameId = requestAnimationFrame(scroll);
+    };
+
+    animationFrameId = requestAnimationFrame(scroll);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isPaused, reels]);
+
+  // Handle manual mouse wheel scroll
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
@@ -90,10 +132,14 @@ export default function ReelsSection() {
 
       <div 
         ref={scrollRef}
-        className="flex overflow-x-auto gap-4 items-start snap-x snap-mandatory pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] cursor-grab active:cursor-grabbing"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+        className="flex overflow-x-auto gap-4 items-start pb-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] cursor-grab active:cursor-grabbing"
       >
         {reels.map((reel) => (
-          <div key={reel.id} className="flex-none w-[200px] md:w-[240px] lg:w-[280px] snap-center">
+          <div key={reel.id} className="flex-none w-[200px] md:w-[240px] lg:w-[280px]">
             <ReelCard reel={reel} />
           </div>
         ))}

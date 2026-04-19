@@ -19,6 +19,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 import { FirebaseProvider } from '@/providers/FirebaseProvider';
 import { CartProvider } from '@/providers/CartProvider';
+import { ThemeProvider } from '@/providers/ThemeProvider';
 
 function AppContent() {
   const [email, setEmail] = useState('');
@@ -138,11 +139,13 @@ function AppContent() {
 export default function App() {
   return (
     <FirebaseProvider>
-      <CartProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </CartProvider>
+      <ThemeProvider>
+        <CartProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </CartProvider>
+      </ThemeProvider>
     </FirebaseProvider>
   );
 }

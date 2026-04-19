@@ -6,10 +6,14 @@
   --font-serif: "Cormorant Garamond", serif;
   --font-epilogue: "Epilogue", sans-serif;
   
-  --color-brand-gold: #D4AF37;
-  --color-brand-champagne: #F7E7CE;
-  --color-brand-dark: #1A1A1A;
-  --color-brand-paper: #F5F2ED;
+  --color-brand-gold: var(--brand-primary, #D4AF37);
+  --color-brand-champagne: var(--brand-secondary, #F7E7CE);
+  --color-brand-dark: var(--brand-text, #1A1A1A);
+  --color-brand-paper: var(--brand-bg, #F5F2ED);
+  --color-brand-button: var(--brand-button, #1A1A1A);
+  --color-brand-button-text: var(--brand-button-text, #ffffff);
+  --color-brand-nav-bg: var(--brand-nav-bg, #ffffff);
+  --color-brand-nav-text: var(--brand-nav-text, #1A1A1A);
 }
 
 @layer base {
@@ -72,6 +76,15 @@
 }
 
 :root {
+    --brand-primary: #D4AF37;
+    --brand-secondary: #F7E7CE;
+    --brand-text: #1A1A1A;
+    --brand-bg: #F5F2ED;
+    --brand-button: #1A1A1A;
+    --brand-button-text: #ffffff;
+    --brand-nav-bg: #ffffff;
+    --brand-nav-text: #1A1A1A;
+    --font-family: 'Inter';
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);

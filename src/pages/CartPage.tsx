@@ -23,7 +23,7 @@ export default function CartPage() {
         </div>
         <h2 className="mb-4 text-3xl font-light">Your cart is empty</h2>
         <p className="mb-8 text-brand-dark/60">Looks like you haven't added any jewelry to your cart yet.</p>
-        <Link to="/products" className={cn(buttonVariants(), "bg-brand-gold text-white")}>
+        <Link to="/products" className={cn(buttonVariants({ variant: "brand" }))}>
           Start Shopping
         </Link>
       </div>
@@ -101,7 +101,7 @@ export default function CartPage() {
               </div>
             </div>
             <Link to="/checkout">
-              <Button className="mt-8 w-full rounded-full bg-brand-dark py-6 text-white hover:bg-brand-dark/90">
+              <Button variant="brand" className="mt-8 w-full rounded-full py-6">
                 Proceed to Checkout <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

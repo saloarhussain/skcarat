@@ -289,8 +289,9 @@ export default function ProductDetailPage() {
                     className="h-12 rounded-lg border-brand-dark/10 bg-[#F9F9F9] text-sm focus-visible:ring-brand-gold"
                   />
                   <Button 
+                    variant="brand-secondary"
                     onClick={handlePincodeCheck}
-                    className="h-12 rounded-lg bg-[#FCE4EC] px-8 text-xs font-bold uppercase tracking-widest text-brand-dark hover:bg-[#F8BBD0]"
+                    className="h-12 rounded-lg px-8 text-xs font-bold uppercase tracking-widest"
                   >
                     Check
                   </Button>
@@ -423,14 +424,16 @@ export default function ProductDetailPage() {
               {/* Actions */}
               <div className="mb-12 flex gap-3">
                 <Button 
+                  variant="brand-secondary"
                   onClick={addToCart} 
-                  className="h-14 flex-1 rounded-xl bg-[#FCE4EC] text-xs font-bold uppercase tracking-widest text-brand-dark shadow-sm transition-transform hover:scale-[1.02] hover:bg-[#F8BBD0] active:scale-[0.98]"
+                  className="h-14 flex-1 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Add to Cart
                 </Button>
                 <Button 
+                  variant="brand"
                   onClick={buyNow} 
-                  className="h-14 flex-1 rounded-xl bg-brand-dark text-xs font-bold uppercase tracking-widest text-white shadow-sm transition-transform hover:scale-[1.02] hover:bg-brand-dark/90 active:scale-[0.98]"
+                  className="h-14 flex-1 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Buy Now
                 </Button>

@@ -129,7 +129,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Add to Cart Button */}
       <div className="border-t border-brand-dark/5 p-3">
         <Button 
-          className="h-11 w-full rounded-lg bg-[#FCE4EC] text-[11px] font-bold uppercase tracking-widest text-brand-dark transition-all hover:bg-[#F8BBD0] active:scale-[0.98]"
+          variant="brand"
+          className="h-11 w-full rounded-lg text-[11px] font-bold uppercase tracking-widest active:scale-[0.98]"
           onClick={handleAddToCart}
         >
           Add to Cart

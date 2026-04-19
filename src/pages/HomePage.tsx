@@ -138,7 +138,7 @@ export default function HomePage() {
               <p className="mb-10 text-lg text-brand-paper/70">
                 Our artisans combine traditional techniques with modern design to create pieces that are as unique as the individuals who wear them.
               </p>
-              <Link to="/about" className={cn(buttonVariants(), "bg-brand-gold text-white hover:bg-brand-gold/90")}>
+              <Link to="/about" className={cn(buttonVariants({ variant: "brand" }), "px-8 py-3 rounded-lg")}>
                 Learn More About Us
               </Link>
             </div>
@@ -162,7 +162,7 @@ export default function HomePage() {
               className="w-full flex-1 rounded-full border border-brand-dark/10 bg-white px-6 py-3 focus:border-brand-gold focus:outline-none sm:w-auto"
               required
             />
-            <Button type="submit" disabled={isSubscribing} className="h-auto rounded-full bg-brand-dark px-8 py-3 text-white hover:bg-brand-dark/90 disabled:opacity-50">
+            <Button type="submit" variant="brand" disabled={isSubscribing} className="h-auto rounded-full px-8 py-3 disabled:opacity-50">
               {isSubscribing ? '...' : 'Subscribe'}
             </Button>
           </form>

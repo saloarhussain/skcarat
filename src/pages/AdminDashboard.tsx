@@ -82,6 +82,12 @@ export default function AdminDashboard() {
     showAnnouncementBar: true,
     heroTitle: 'Exquisite Aura for Every Occasion',
     heroSubtitle: 'Handcrafted luxury jewelry designed to elevate your style.',
+    backgroundColor: '#FBF9F4',
+    navBackgroundColor: '#ffffff',
+    navTextColor: '#303030',
+    buttonColor: '#303030',
+    buttonTextColor: '#ffffff',
+    textColor: '#303030',
     fontFamily: 'Inter'
   });
 
@@ -207,7 +213,8 @@ export default function AdminDashboard() {
     // Real-time listener for Theme Config
     const unsubscribeTheme = onSnapshot(doc(db, 'settings', 'theme_config'), (snapshot) => {
       if (snapshot.exists()) {
-        setThemeConfig(snapshot.data() as any);
+        const data = snapshot.data();
+        setThemeConfig((prev: any) => ({ ...prev, ...data }));
       }
     });
 
@@ -223,6 +230,20 @@ export default function AdminDashboard() {
       unsubscribeTheme();
     };
   }, [isAdmin]);
+
+  useEffect(() => {
+    // Immediate preview of theme changes in Admin Panel
+    const root = document.documentElement;
+    if (themeConfig.primaryColor) root.style.setProperty('--brand-primary', themeConfig.primaryColor);
+    if (themeConfig.secondaryColor) root.style.setProperty('--brand-secondary', themeConfig.secondaryColor);
+    if (themeConfig.buttonColor) root.style.setProperty('--brand-button', themeConfig.buttonColor);
+    if (themeConfig.buttonTextColor) root.style.setProperty('--brand-button-text', themeConfig.buttonTextColor);
+    if (themeConfig.textColor) root.style.setProperty('--brand-text', themeConfig.textColor);
+    if (themeConfig.backgroundColor) root.style.setProperty('--brand-bg', themeConfig.backgroundColor);
+    if (themeConfig.navBackgroundColor) root.style.setProperty('--brand-nav-bg', themeConfig.navBackgroundColor);
+    if (themeConfig.navTextColor) root.style.setProperty('--brand-nav-text', themeConfig.navTextColor);
+    if (themeConfig.fontFamily) root.style.setProperty('--font-family', themeConfig.fontFamily);
+  }, [themeConfig]);
 
   const [authSettings, setAuthSettings] = useState({
     emailEnabled: true,
@@ -969,13 +990,13 @@ export default function AdminDashboard() {
     <div className="flex h-screen bg-[#F1F1F1] text-[#303030] font-sans overflow-hidden relative">
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-[#EBEBEB] border-r border-[#D1D1D1] flex flex-col transition-transform duration-300 md:relative md:translate-x-0",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed inset-y-0 left-0 z-50 w-64 bg-[#EBEBEB] border-r border-[#D1D1D1] flex flex-col transition-all duration-300 md:relative",
+        isSidebarOpen ? "translate-x-0 md:ml-0" : "-translate-x-full md:-ml-64"
       )}>
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-brand-dark rounded-lg flex items-center justify-center text-white font-bold">A</div>
-            <span className="font-bold text-lg tracking-tight">Aura Admin</span>
+            <div className="h-8 w-8 bg-brand-dark rounded-lg flex items-center justify-center text-white font-bold min-w-[2rem]">A</div>
+            <span className="font-bold text-lg tracking-tight whitespace-nowrap">Aura Admin</span>
           </div>
           <button 
             type="button"
@@ -1186,14 +1207,14 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Topbar */}
         <header className="h-14 bg-[#1A1A1A] text-white flex items-center justify-between px-4 flex-shrink-0 z-40">
           <div className="flex items-center gap-4">
             <button 
               type="button"
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-1.5 hover:bg-white/10 rounded-md"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -3401,6 +3422,56 @@ export default function AdminDashboard() {
                                    <Input value={themeConfig.secondaryColor} onChange={e => setThemeConfig({...themeConfig, secondaryColor: e.target.value})} />
                                  </div>
                                </div>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Main Text Color</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.textColor} onChange={e => setThemeConfig({...themeConfig, textColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.textColor} onChange={e => setThemeConfig({...themeConfig, textColor: e.target.value})} />
+                                 </div>
+                               </div>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Page Background</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.backgroundColor} onChange={e => setThemeConfig({...themeConfig, backgroundColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.backgroundColor} onChange={e => setThemeConfig({...themeConfig, backgroundColor: e.target.value})} />
+                                 </div>
+                               </div>
+                             </CardContent>
+                           </Card>
+
+                           <Card className="border-none shadow-sm bg-white">
+                             <CardHeader>
+                               <CardTitle className="text-lg font-bold">Button & Navigation</CardTitle>
+                             </CardHeader>
+                             <CardContent className="space-y-4">
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Button Background</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.buttonColor} onChange={e => setThemeConfig({...themeConfig, buttonColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.buttonColor} onChange={e => setThemeConfig({...themeConfig, buttonColor: e.target.value})} />
+                                 </div>
+                               </div>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Button Text Color</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.buttonTextColor} onChange={e => setThemeConfig({...themeConfig, buttonTextColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.buttonTextColor} onChange={e => setThemeConfig({...themeConfig, buttonTextColor: e.target.value})} />
+                                 </div>
+                               </div>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Navbar Background</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.navBackgroundColor} onChange={e => setThemeConfig({...themeConfig, navBackgroundColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.navBackgroundColor} onChange={e => setThemeConfig({...themeConfig, navBackgroundColor: e.target.value})} />
+                                 </div>
+                               </div>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Navbar Text color</label>
+                                 <div className="flex gap-2">
+                                   <Input type="color" value={themeConfig.navTextColor} onChange={e => setThemeConfig({...themeConfig, navTextColor: e.target.value})} className="w-12 h-10 p-1" />
+                                   <Input value={themeConfig.navTextColor} onChange={e => setThemeConfig({...themeConfig, navTextColor: e.target.value})} />
+                                 </div>
+                               </div>
                              </CardContent>
                            </Card>
 
@@ -3476,6 +3547,27 @@ export default function AdminDashboard() {
                                <div className="space-y-2">
                                  <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Hero Subtitle</label>
                                  <Input value={themeConfig.heroSubtitle} onChange={e => setThemeConfig({...themeConfig, heroSubtitle: e.target.value})} />
+                               </div>
+                             </CardContent>
+                           </Card>
+
+                           <Card className="border-none shadow-sm bg-white md:col-span-2">
+                             <CardHeader>
+                               <CardTitle className="text-lg font-bold">Typography</CardTitle>
+                             </CardHeader>
+                             <CardContent>
+                               <div className="space-y-2">
+                                 <label className="text-xs font-bold uppercase tracking-widest text-brand-dark/60">Font Family</label>
+                                 <select 
+                                   value={themeConfig.fontFamily} 
+                                   onChange={e => setThemeConfig({...themeConfig, fontFamily: e.target.value})}
+                                   className="w-full rounded-md border border-brand-dark/10 bg-white px-3 py-2 text-sm focus:border-brand-gold focus:outline-none"
+                                 >
+                                   <option value="Inter">Inter (Modern Sans)</option>
+                                   <option value="'Cormorant Garamond', serif">Cormorant Garamond (Elegant Serif)</option>
+                                   <option value="'Epilogue', sans-serif">Epilogue (Bold Contemporary)</option>
+                                   <option value="system-ui, sans-serif">System Default</option>
+                                 </select>
                                </div>
                              </CardContent>
                            </Card>

@@ -52,10 +52,10 @@ export default function Hero() {
               </p>
             )}
             <div className="flex flex-wrap gap-4 pt-4">
-              <Link to="/products" className={cn(buttonVariants({ size: "lg" }), "bg-brand-gold text-white hover:bg-brand-gold/90 px-8 py-6 text-lg")}>
+              <Link to="/products" className={cn(buttonVariants({ variant: "brand", size: "lg" }), "px-8 py-6 text-lg rounded-md")}>
                 Shop Collection
               </Link>
-              <Link to="/blog" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-white text-white hover:bg-white hover:text-brand-dark px-8 py-6 text-lg")}>
+              <Link to="/blog" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "border-white/40 text-white hover:bg-white/10 px-8 py-6 text-lg")}>
                 Style Tips
               </Link>
             </div>
